@@ -26,7 +26,7 @@ body {
     width: 100%;
     max-width: 420px;
     height: 100vh;
-    height: 100dvh; /* Menyesuaikan layar HP modern */
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -79,7 +79,7 @@ canvas {
     touch-action: none;
 }
 
-/* Footer Controls (Dipastikan Tampak Terlihat Penuh) */
+/* Footer Controls */
 .footer-controls {
     width: 100%;
     display: flex;
