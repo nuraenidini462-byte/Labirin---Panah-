@@ -1,1 +1,1 @@
-# Labirin---Panah-
+# Labirin-Panah
