@@ -2,38 +2,39 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 const levelNumEl = document.getElementById('level-num');
+const coinCountEl = document.getElementById('coin-count');
 const livesDisplayEl = document.getElementById('lives-display');
 const themeBtn = document.getElementById('themeBtn');
 const audioBtn = document.getElementById('audioBtn');
-const resetBtn = document.getElementById('resetBtn');
+const buyLifeBtn = document.getElementById('buyLifeBtn');
 
 let currentLevel = 1;
+let coins = 100;
 let lives = 3;
 let soundEnabled = true;
 
-// Grid Padat Seperti Foto (Kolom x Baris)
+// Grid Panah
 let cols = 12;
 let rows = 16;
 let cellSize = 25;
-
 let arrows = [];
 
-// Warna Ular Panah (Sesuai Tema Biru Cyan)
-let arrowColor = '#38bdf8'; 
-
+// Fitur 1: Palet Lukis Ganti Warna Latar Belakang
 const themes = ['theme-blue', 'theme-dark', 'theme-purple', 'theme-green'];
 const arrowColors = ['#38bdf8', '#60a5fa', '#c084fc', '#34d399'];
 let currentThemeIdx = 0;
+let arrowColor = arrowColors[0];
 
 themeBtn.addEventListener('click', () => {
     document.body.classList.remove(themes[currentThemeIdx]);
     currentThemeIdx = (currentThemeIdx + 1) % themes.length;
     document.body.classList.add(themes[currentThemeIdx]);
     arrowColor = arrowColors[currentThemeIdx];
+    playSound('move');
     draw();
 });
 
-// Sound Effects Synthesizer
+// Fitur 2: Audio & Setting Sound
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playTone(freq, duration, type = 'sine') {
@@ -57,16 +58,30 @@ function playSound(type) {
     if (type === 'move') playTone(600, 0.12, 'triangle');
     if (type === 'hit')  playTone(150, 0.2, 'sawtooth');
     if (type === 'win')  playTone(800, 0.3, 'sine');
+    if (type === 'buy')  playTone(1000, 0.2, 'sine');
 }
 
 audioBtn.addEventListener('click', () => {
     soundEnabled = !soundEnabled;
+    audioBtn.textContent = soundEnabled ? '🔊' : '🔇';
     audioBtn.style.opacity = soundEnabled ? '1' : '0.5';
 });
 
-resetBtn.addEventListener('click', () => {
-    playSound('move');
-    initLevel();
+// Fitur 3: Pembelian Nyawa (+1 Nyawa seharga 50 Koin)
+buyLifeBtn.addEventListener('click', () => {
+    if (lives >= 3) {
+        alert("Nyawa Anda masih penuh (maksimal 3)!");
+        return;
+    }
+    if (coins < 50) {
+        alert("Koin tidak cukup! Butuh 50 🪙 untuk membeli nyawa.");
+        return;
+    }
+    
+    coins -= 50;
+    lives += 1;
+    playSound('buy');
+    updateUI();
 });
 
 function resizeCanvas() {
@@ -74,7 +89,6 @@ function resizeCanvas() {
     const availWidth = wrapper.clientWidth;
     const availHeight = wrapper.clientHeight;
 
-    // Sesuaikan ukuran cell agar pas layar
     const cellW = availWidth / cols;
     const cellH = availHeight / rows;
     cellSize = Math.min(cellW, cellH);
@@ -86,11 +100,10 @@ function resizeCanvas() {
 
 window.addEventListener('resize', resizeCanvas);
 
-// Generator Labirin Ular Panah Padat & Kompleks
+// Generator Ular Panah
 function initLevel() {
     arrows = [];
     
-    // Makin tinggi level, grid makin rapat & padat
     if (currentLevel <= 2) {
         cols = 10; rows = 14;
     } else if (currentLevel <= 5) {
@@ -102,7 +115,6 @@ function initLevel() {
     let occupied = Array(rows).fill(null).map(() => Array(cols).fill(false));
     const dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
 
-    // Generator Mengisi Papan Sampai Sangat Padat Seperti Foto
     for (let attempt = 0; attempt < 1200; attempt++) {
         let hx = Math.floor(Math.random() * cols);
         let hy = Math.floor(Math.random() * rows);
@@ -111,7 +123,6 @@ function initLevel() {
 
         let dir = dirs[Math.floor(Math.random() * dirs.length)];
 
-        // Cek apakah jalur keluar di depan kepala panah bebas
         let pathClearOut = true;
         let cx = hx, cy = hy;
         while (true) {
@@ -129,7 +140,6 @@ function initLevel() {
 
         if (!pathClearOut) continue;
 
-        // Tentukan panjang ular (3 - 8 segmen)
         let targetLen = Math.floor(Math.random() * 6) + 3;
         let path = [{x: hx, y: hy}];
         let tempOccupied = JSON.parse(JSON.stringify(occupied));
@@ -184,14 +194,19 @@ function initLevel() {
 
 function updateUI() {
     levelNumEl.textContent = currentLevel;
+    coinCountEl.textContent = coins;
+    
     let heartsHTML = '';
     for (let i = 0; i < 3; i++) {
-        heartsHTML += i < lives ? '❤️ ' : '🖤 ';
+        heartsHTML += i < lives ? '❤️' : '🖤';
     }
-    livesDisplayEl.innerHTML = heartsHTML.trim();
+    livesDisplayEl.innerHTML = heartsHTML;
+    
+    // Nonaktifkan tombol beli jika koin kurang atau nyawa penuh
+    buyLifeBtn.style.opacity = (lives >= 3 || coins < 50) ? '0.5' : '1';
 }
 
-// Render Ular Panah PERSIS GAMBAR (Garis Tebal Ujung Lancip + Titik Buntut)
+// Render Panah & Titik Buntut
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -200,7 +215,7 @@ function draw() {
         const head = path[0];
         const tail = path[path.length - 1];
 
-        // 1. Gambar Badan Ular (Garis Berkelok Rapi)
+        // Badan Panah
         ctx.strokeStyle = arrowColor;
         ctx.lineWidth = cellSize * 0.32;
         ctx.lineCap = 'round';
@@ -213,15 +228,15 @@ function draw() {
         }
         ctx.stroke();
 
-        // 2. Gambar Titik Ekor/Buntut (Persis Gambar)
+        // Titik Ekor/Buntut
         const tailCx = (tail.x + 0.5) * cellSize;
         const tailCy = (tail.y + 0.5) * cellSize;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.beginPath();
         ctx.arc(tailCx, tailCy, cellSize * 0.1, 0, Math.PI * 2);
         ctx.fill();
 
-        // 3. Gambar Ujung Kepala Panah Menyatu Lancip (Persis Gambar)
+        // Kepala Panah
         const headCx = (head.x + 0.5) * cellSize;
         const headCy = (head.y + 0.5) * cellSize;
         const arrowSize = cellSize * 0.42;
@@ -239,7 +254,6 @@ function draw() {
 
         ctx.fillStyle = arrowColor;
         ctx.beginPath();
-        // Bentuk V Lancip Kepala Panah
         ctx.moveTo(arrowSize * 0.8, 0);
         ctx.lineTo(-arrowSize * 0.4, -arrowSize * 0.55);
         ctx.lineTo(-arrowSize * 0.1, 0);
@@ -274,7 +288,7 @@ function checkAndMove(index) {
     const head = a.path[0];
     let blocked = false;
 
-    // Cek Tabrakan Meluncur Keluar
+    // Cek Tabrakan
     arrows.forEach((other, oIdx) => {
         if (oIdx !== index) {
             other.path.forEach(pt => {
@@ -291,29 +305,30 @@ function checkAndMove(index) {
         lives -= 1;
         updateUI();
 
-        // Efek Getar Saat Tabrakan
         canvas.style.transform = 'translate(6px, 0)';
         setTimeout(() => canvas.style.transform = 'translate(-6px, 0)', 50);
         setTimeout(() => canvas.style.transform = 'translate(0, 0)', 100);
 
         if (lives <= 0) {
             setTimeout(() => {
-                alert("Game Over! Nyawa Habis.");
+                alert("Game Over! Nyawa Habis. Anda bisa membeli nyawa dengan koin atau mengulang level.");
                 lives = 3;
-                currentLevel = 1;
                 initLevel();
             }, 150);
         }
     } else {
         playSound('move');
         arrows.splice(index, 1);
+        coins += 15; // Mendapat 15 koin per panah yang sukses keluar
+        updateUI();
         draw();
 
         if (arrows.length === 0) {
             setTimeout(() => {
                 playSound('win');
-                alert(`Level ${currentLevel} Selesai! 🎉`);
+                alert(`Selamat! Level ${currentLevel} Selesai 🎉`);
                 currentLevel++;
+                lives = 3;
                 initLevel();
             }, 200);
         }
