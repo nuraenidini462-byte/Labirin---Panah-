@@ -1,314 +1,245 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const resetBtn = document.getElementById('resetBtn');
-const audioBtn = document.getElementById('audioBtn');
-const buyLifeBtn = document.getElementById('buyLifeBtn');
-const livesContainer = document.getElementById('lives-display');
+
 const levelNumEl = document.getElementById('level-num');
 const coinCountEl = document.getElementById('coin-count');
+const livesDisplayEl = document.getElementById('lives-display');
+const buyLifeBtn = document.getElementById('buyLifeBtn');
+const resetBtn = document.getElementById('resetBtn');
+const audioBtn = document.getElementById('audioBtn');
 
-const GRID_SIZE = 6;
-const CELL_SIZE = 50;
-canvas.width = GRID_SIZE * CELL_SIZE;
-canvas.height = GRID_SIZE * CELL_SIZE;
+// Game State
+let currentLevel = 1;
+let coins = 100; // Modal awal koin untuk coba fitur beli nyawa
+let lives = 2;   // Mulai dari 2 agar bisa dicoba dibeli jadi 3
+let soundEnabled = true;
 
-let currentLevelIndex = 0;
-let lives = 3;
-let coins = 0;
-let isAnimating = false;
-let audioMuted = false;
+// Grid and Arena settings
+const gridSize = 6;
+let cellSize = 50;
 
-// Audio Synthesizer (Web Audio API)
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function playSound(type) {
-    if (audioMuted) return;
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    if (type === 'slide') {
-        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.15);
-    } else if (type === 'hit') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-        osc.frequency.linearRampToValueAtTime(50, audioCtx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.2);
-    } else if (type === 'win') {
-        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-        osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1);
-        osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.4);
-    }
-}
-
-// Data Banyak Level
-const LEVELS = [
-    // Level 1
-    [
-        { id: 1, x: 0, y: 0, dir: 'R', length: 2 },
-        { id: 2, x: 2, y: 0, dir: 'D', length: 3 },
-        { id: 3, x: 5, y: 1, dir: 'U', length: 2 },
-        { id: 4, x: 1, y: 3, dir: 'L', length: 2 },
-        { id: 5, x: 3, y: 4, dir: 'R', length: 3 }
-    ],
-    // Level 2
-    [
-        { id: 1, x: 1, y: 0, dir: 'D', length: 4 },
-        { id: 2, x: 0, y: 1, dir: 'R', length: 3 },
-        { id: 3, x: 4, y: 2, dir: 'L', length: 2 },
-        { id: 4, x: 2, y: 4, dir: 'U', length: 3 },
-        { id: 5, x: 0, y: 5, dir: 'R', length: 4 }
-    ],
-    // Level 3
-    [
-        { id: 1, x: 0, y: 0, dir: 'D', length: 3 },
-        { id: 2, x: 0, y: 3, dir: 'R', length: 4 },
-        { id: 3, x: 5, y: 0, dir: 'D', length: 5 },
-        { id: 4, x: 2, y: 1, dir: 'L', length: 2 },
-        { id: 5, x: 1, y: 5, dir: 'R', length: 3 }
-    ],
-    // Level 4
-    [
-        { id: 1, x: 0, y: 0, dir: 'R', length: 3 },
-        { id: 2, x: 3, y: 0, dir: 'D', length: 3 },
-        { id: 3, x: 0, y: 2, dir: 'U', length: 2 },
-        { id: 4, x: 1, y: 4, dir: 'R', length: 4 },
-        { id: 5, x: 5, y: 2, dir: 'D', length: 3 },
-        { id: 6, x: 2, y: 5, dir: 'L', length: 2 }
-    ]
-];
-
+// Arrows data
 let arrows = [];
 
-function loadLevel(index) {
-    if (index >= LEVELS.length) {
-        alert('🎉 Selamat! Anda telah menyelesaikan SEMUA level!');
-        currentLevelIndex = 0;
-    }
+// Audio Web Audio API Synthetic Sound (Tanpa file eksternal)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(freq, type = 'sine', duration = 0.15) {
+    if (!soundEnabled) return;
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    } catch (e) {}
+}
+
+function resizeCanvas() {
+    const wrapper = document.querySelector('.canvas-wrapper');
+    const availableWidth = wrapper.clientWidth;
+    const availableHeight = wrapper.clientHeight;
     
-    levelNumEl.textContent = currentLevelIndex + 1;
-    arrows = JSON.parse(JSON.stringify(LEVELS[currentLevelIndex]));
-    isAnimating = false;
+    const size = Math.min(availableWidth, availableHeight);
+    canvas.width = size;
+    canvas.height = size;
+    cellSize = size / gridSize;
+    draw();
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+function initLevel() {
+    arrows = [];
+    const dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
+    const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+    
+    let count = Math.min(6 + currentLevel * 2, 20);
+    
+    for (let i = 0; i < count; i++) {
+        let x = Math.floor(Math.random() * (gridSize - 2)) + 1;
+        let y = Math.floor(Math.random() * (gridSize - 2)) + 1;
+        
+        if (!arrows.some(a => a.x === x && a.y === y)) {
+            arrows.push({
+                x: x,
+                y: y,
+                dir: dirs[Math.floor(Math.random() * dirs.length)],
+                color: colors[Math.floor(Math.random() * colors.length)],
+                moving: false,
+                vx: 0,
+                vy: 0
+            });
+        }
+    }
+    updateUI();
     draw();
 }
 
 function updateUI() {
+    levelNumEl.textContent = currentLevel;
+    coinCountEl.textContent = coins;
+    
+    // Update Lives Display
     let hearts = '';
     for (let i = 0; i < 3; i++) {
         hearts += i < lives ? '❤️ ' : '🖤 ';
     }
-    livesContainer.innerHTML = hearts;
-    coinCountEl.textContent = coins;
-}
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = '#1e3a8a';
-    for (let r = 0; r < GRID_SIZE; r++) {
-        for (let c = 0; c < GRID_SIZE; c++) {
-            ctx.beginPath();
-            ctx.arc(c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2, 3, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-
-    arrows.forEach(arrow => {
-        ctx.strokeStyle = '#38bdf8';
-        ctx.fillStyle = '#38bdf8';
-        ctx.lineWidth = 14;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        let startX = arrow.x * CELL_SIZE + CELL_SIZE / 2;
-        let startY = arrow.y * CELL_SIZE + CELL_SIZE / 2;
-        let endX = startX;
-        let endY = startY;
-
-        if (arrow.dir === 'R') endX += (arrow.length - 1) * CELL_SIZE;
-        if (arrow.dir === 'L') endX -= (arrow.length - 1) * CELL_SIZE;
-        if (arrow.dir === 'D') endY += (arrow.length - 1) * CELL_SIZE;
-        if (arrow.dir === 'U') endY -= (arrow.length - 1) * CELL_SIZE;
-
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
-        ctx.stroke();
-
-        drawArrowHead(endX, endY, arrow.dir);
-    });
-}
-
-function drawArrowHead(x, y, dir) {
-    ctx.beginPath();
-    const size = 10;
-    if (dir === 'R') {
-        ctx.moveTo(x + size, y);
-        ctx.lineTo(x - size, y - size);
-        ctx.lineTo(x - size, y + size);
-    } else if (dir === 'L') {
-        ctx.moveTo(x - size, y);
-        ctx.lineTo(x + size, y - size);
-        ctx.lineTo(x + size, y + size);
-    } else if (dir === 'U') {
-        ctx.moveTo(x, y - size);
-        ctx.lineTo(x - size, y + size);
-        ctx.lineTo(x + size, y + size);
-    } else if (dir === 'D') {
-        ctx.moveTo(x, y + size);
-        ctx.lineTo(x - size, y - size);
-        ctx.lineTo(x + size, y - size);
-    }
-    ctx.closePath();
-    ctx.fill();
-}
-
-canvas.addEventListener('click', (e) => {
-    if (isAnimating) return;
-
-    if (lives <= 0) {
-        alert('💔 Nyawa Anda habis! Beli nyawa dengan koin atau reset level.');
-        return;
-    }
-
-    const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-
-    const col = Math.floor(clickX / CELL_SIZE);
-    const row = Math.floor(clickY / CELL_SIZE);
-
-    arrows.forEach((arrow, index) => {
-        if (isCellInArrow(arrow, col, row)) {
-            tryMoveArrow(arrow, index);
-        }
-    });
-});
-
-function isCellInArrow(arrow, col, row) {
-    for (let i = 0; i < arrow.length; i++) {
-        let cx = arrow.x;
-        let cy = arrow.y;
-        if (arrow.dir === 'R') cx += i;
-        if (arrow.dir === 'L') cx -= i;
-        if (arrow.dir === 'D') cy += i;
-        if (arrow.dir === 'U') cy -= i;
-
-        if (cx === col && cy === row) return true;
-    }
-    return false;
-}
-
-function tryMoveArrow(arrow, index) {
-    if (isPathBlocked(arrow)) {
-        lives--;
-        playSound('hit');
-        updateUI();
-
-        canvas.style.transform = 'translateX(8px)';
-        setTimeout(() => canvas.style.transform = 'translateX(-8px)', 50);
-        setTimeout(() => canvas.style.transform = 'translateX(0)', 100);
-        if (navigator.vibrate) navigator.vibrate(200);
-
-        return;
-    }
-
-    isAnimating = true;
-    coins += 10;
-    playSound('slide');
-    updateUI();
-
-    let interval = setInterval(() => {
-        if (arrow.dir === 'R') arrow.x += 0.4;
-        if (arrow.dir === 'L') arrow.x -= 0.4;
-        if (arrow.dir === 'D') arrow.y += 0.4;
-        if (arrow.dir === 'U') arrow.y -= 0.4;
-
-        draw();
-
-        if (arrow.x < -3 || arrow.x > GRID_SIZE + 3 || arrow.y < -3 || arrow.y > GRID_SIZE + 3) {
-            clearInterval(interval);
-            arrows.splice(index, 1);
-            isAnimating = false;
-            draw();
-
-            if (arrows.length === 0) {
-                playSound('win');
-                setTimeout(() => {
-                    alert('🎉 Level Selesai! Lanjut ke Level Berikutnya!');
-                    currentLevelIndex++;
-                    loadLevel(currentLevelIndex);
-                }, 150);
-            }
-        }
-    }, 20);
-}
-
-function isPathBlocked(arrow) {
-    let checkX = arrow.x;
-    let checkY = arrow.y;
-
-    if (arrow.dir === 'R') checkX += arrow.length - 1;
-    if (arrow.dir === 'D') checkY += arrow.length - 1;
-
-    while (true) {
-        if (arrow.dir === 'R') checkX++;
-        if (arrow.dir === 'L') checkX--;
-        if (arrow.dir === 'D') checkY++;
-        if (arrow.dir === 'U') checkY--;
-
-        if (checkX < 0 || checkX >= GRID_SIZE || checkY < 0 || checkY >= GRID_SIZE) {
-            return false;
-        }
-
-        for (let other of arrows) {
-            if (other.id !== arrow.id && isCellInArrow(other, checkX, checkY)) {
-                return true;
-            }
-        }
-    }
-}
-
-buyLifeBtn.addEventListener('click', () => {
-    if (lives >= 3) {
-        alert('❤️ Nyawa Anda masih penuh!');
-        return;
-    }
-    if (coins >= 50) {
-        coins -= 50;
-        lives++;
-        updateUI();
-        playSound('win');
+    livesDisplayEl.textContent = hearts.trim();
+    
+    // Status Tombol Beli Nyawa
+    if (lives >= 3 || coins < 50) {
+        buyLifeBtn.style.opacity = '0.6';
     } else {
-        alert('🪙 Koin tidak cukup! Butuh 50 koin untuk beli 1 nyawa.');
+        buyLifeBtn.style.opacity = '1';
     }
-});
+}
 
-audioBtn.addEventListener('click', () => {
-    audioMuted = !audioMuted;
-    audioBtn.textContent = audioMuted ? '🔇' : '🔊';
+// Beli Nyawa Function
+buyLifeBtn.addEventListener('click', () => {
+    if (lives < 3 && coins >= 50) {
+        coins -= 50;
+        lives += 1;
+        playSound(600, 'triangle', 0.2);
+        updateUI();
+    } else if (lives >= 3) {
+        alert("Nyawa Anda sudah penuh! (Maksimal 3)");
+    } else {
+        alert("Koin tidak cukup! Butuh 50 🪙");
+    }
 });
 
 resetBtn.addEventListener('click', () => {
-    lives = 3;
-    updateUI();
-    loadLevel(currentLevelIndex);
+    playSound(300, 'sine', 0.1);
+    initLevel();
 });
 
-updateUI();
-loadLevel(currentLevelIndex);
+audioBtn.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    audioBtn.textContent = soundEnabled ? '🔊' : '🔇';
+});
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw Grid
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= gridSize; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * cellSize, 0);
+        ctx.lineTo(i * cellSize, canvas.height);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(0, i * cellSize);
+        ctx.lineTo(canvas.width, i * cellSize);
+        ctx.stroke();
+    }
+    
+    // Draw Arrows
+    arrows.forEach(a => {
+        const cx = (a.x + 0.5) * cellSize;
+        const cy = (a.y + 0.5) * cellSize;
+        const rad = cellSize * 0.35;
+        
+        ctx.save();
+        ctx.translate(cx, cy);
+        
+        let angle = 0;
+        if (a.dir === 'RIGHT') angle = 0;
+        if (a.dir === 'DOWN') angle = Math.PI / 2;
+        if (a.dir === 'LEFT') angle = Math.PI;
+        if (a.dir === 'UP') angle = -Math.PI / 2;
+        
+        ctx.rotate(angle);
+        
+        // Arrow Shape
+        ctx.fillStyle = a.color;
+        ctx.beginPath();
+        ctx.moveTo(rad, 0);
+        ctx.lineTo(-rad * 0.6, -rad * 0.7);
+        ctx.lineTo(-rad * 0.2, 0);
+        ctx.lineTo(-rad * 0.6, rad * 0.7);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.restore();
+    });
+}
+
+// Touch & Click Event Handling
+canvas.addEventListener('pointerdown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const touchX = e.clientX - rect.left;
+    const touchY = e.clientY - rect.top;
+    
+    const gx = Math.floor(touchX / cellSize);
+    const gy = Math.floor(touchY / cellSize);
+    
+    const clickedIndex = arrows.findIndex(a => a.x === gx && a.y === gy && !a.moving);
+    if (clickedIndex !== -1) {
+        checkAndMove(clickedIndex);
+    }
+});
+
+function checkAndMove(index) {
+    const a = arrows[index];
+    let blocked = false;
+    
+    // Cek tabrakan di jalur panah
+    arrows.forEach((other, oIdx) => {
+        if (oIdx !== index) {
+            if (a.dir === 'RIGHT' && other.y === a.y && other.x > a.x) blocked = true;
+            if (a.dir === 'LEFT' && other.y === a.y && other.x < a.x) blocked = true;
+            if (a.dir === 'DOWN' && other.x === a.x && other.y > a.y) blocked = true;
+            if (a.dir === 'UP' && other.x === a.x && other.y < a.y) blocked = true;
+        }
+    });
+    
+    if (blocked) {
+        // Tabrakan -> Nyawa berkurang
+        playSound(150, 'sawtooth', 0.25);
+        lives -= 1;
+        updateUI();
+        
+        // Shake Canvas
+        canvas.style.transform = 'translate(4px, 0)';
+        setTimeout(() => canvas.style.transform = 'translate(-4px, 0)', 50);
+        setTimeout(() => canvas.style.transform = 'translate(0, 0)', 100);
+        
+        if (lives <= 0) {
+            setTimeout(() => {
+                alert("Game Over! Nyawa Habis.");
+                lives = 3;
+                currentLevel = 1;
+                initLevel();
+            }, 150);
+        }
+    } else {
+        // Berhasil Keluar
+        playSound(440, 'sine', 0.15);
+        arrows.splice(index, 1);
+        coins += 10;
+        updateUI();
+        draw();
+        
+        if (arrows.length === 0) {
+            setTimeout(() => {
+                playSound(800, 'sine', 0.3);
+                alert(`Selamat! Level ${currentLevel} Selesai 🎉`);
+                currentLevel++;
+                initLevel();
+            }, 200);
+        }
+    }
+}
+
+// Start Game
+resizeCanvas();
+initLevel();
