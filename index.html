@@ -8,27 +8,33 @@
 </head>
 <body class="theme-blue">
     <div class="game-container">
-        <!-- Header Atas Persis Gambar -->
+        <!-- Header Atas: Level, Koin, & Nyawa -->
         <div class="header">
             <div class="level-pill">
                 <span class="star-icon">★</span> Level <span id="level-num">1</span>
             </div>
+            <div class="coin-pill">
+                🪙 <span id="coin-count">100</span>
+            </div>
             <div class="lives-pill" id="lives-display">
-                <span class="heart">❤️</span>
-                <span class="heart">❤️</span>
-                <span class="heart">❤️</span>
+                ❤️ ❤️ ❤️
             </div>
         </div>
 
-        <!-- Area Main Canvas Padat -->
+        <!-- Area Canvas Main -->
         <div class="canvas-wrapper">
             <canvas id="gameCanvas"></canvas>
         </div>
 
-        <!-- Footer Control Bar Persis Gambar -->
+        <!-- Footer Control Bar -->
         <div class="footer-bar">
-            <button class="footer-btn btn-palette" id="themeBtn" title="Ganti Tema Warna">🎨</button>
-            <button class="footer-btn btn-settings" id="audioBtn" title="Pengaturan Suara">⚙️</button>
+            <!-- 1. Palet Ujung Kiri: Ganti Warna Latar -->
+            <button class="footer-btn btn-palette" id="themeBtn" title="Ganti Warna Latar">🎨</button>
+            
+            <!-- 2. Setting Sound/Audio -->
+            <button class="footer-btn btn-settings" id="audioBtn" title="Pengaturan Suara">🔊</button>
+            
+            <!-- 3. Zoom Slider / Indicator -->
             <div class="zoom-slider-container">
                 <span class="zoom-icon">—</span>
                 <div class="zoom-track">
@@ -36,7 +42,12 @@
                 </div>
                 <span class="zoom-icon">+</span>
             </div>
-            <button class="footer-btn btn-menu" id="resetBtn" title="Reset Level">⣿</button>
+            
+            <!-- 4. Tombol Pembelian Nyawa -->
+            <button class="footer-btn btn-buy-life" id="buyLifeBtn" title="Beli Nyawa (50 Koin)">
+                <span class="btn-heart-icon">❤️</span>
+                <span class="btn-cost-text">+1</span>
+            </button>
         </div>
     </div>
 
