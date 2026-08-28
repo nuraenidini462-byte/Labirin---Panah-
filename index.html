@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Labirin Panah Ular</title>
+    <title>Labirin Panah Ular Rumit</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,11 +20,20 @@
             <canvas id="gameCanvas"></canvas>
         </div>
 
-        <!-- Control Bar Bawah -->
+        <!-- Control Bar Bawah (Tampak Jelas) -->
         <div class="footer-controls">
-            <button class="icon-btn purple-btn" id="resetBtn" title="Reset Level">🎨</button>
-            <button class="icon-btn green-btn" id="audioBtn" title="Suara">🔊</button>
-            <button class="buy-life-btn" id="buyLifeBtn">➕ ❤️ (50 🪙)</button>
+            <button class="icon-btn purple-btn" id="resetBtn" title="Reset Level">
+                <span class="btn-icon">🎨</span>
+                <span class="btn-text">Reset</span>
+            </button>
+            <button class="icon-btn green-btn" id="audioBtn" title="Suara">
+                <span class="btn-icon">🔊</span>
+                <span class="btn-text">Musik</span>
+            </button>
+            <button class="buy-life-btn" id="buyLifeBtn">
+                <span class="btn-icon">➕ ❤️</span>
+                <span class="btn-text">(50 🪙)</span>
+            </button>
         </div>
     </div>
 
