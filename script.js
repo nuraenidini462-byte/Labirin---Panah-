@@ -13,12 +13,12 @@ let coins = 100;
 let lives = 3;
 let soundEnabled = true;
 
-const gridSize = 6;
-let cellSize = 50;
+let gridSize = 6; // Bertambah seiring naik level
+let cellSize = 40;
 
 let arrows = [];
 
-// Synthesizer Musik & Suara
+// Synthesizer Audio
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playTone(freq, duration, type = 'sine', delay = 0) {
@@ -74,27 +74,39 @@ function resizeCanvas() {
 
 window.addEventListener('resize', resizeCanvas);
 
-// Pembentukan Labirin Ular Rumit (Bisa Diselesaikan)
+// Logika Progresi Level: Makin Tinggi Level = Papan Lebih Besar & Makin Rumit
 function initLevel() {
     arrows = [];
-    const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+    const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
     const dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
     
+    // Tentukan Ukuran Papan & Jumlah Panah Berdasarkan Level
+    if (currentLevel <= 2) {
+        gridSize = 6;
+    } else if (currentLevel <= 5) {
+        gridSize = 7;
+    } else {
+        gridSize = 8;
+    }
+    
     let occupied = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false));
-    let count = Math.min(3 + currentLevel, 7);
+    let arrowCount = Math.min(3 + Math.floor(currentLevel * 1.2), 12);
 
-    for (let i = 0; i < count; i++) {
-        let length = Math.floor(Math.random() * 3) + 3; // Panjang 3 - 5 Kotak
+    for (let i = 0; i < arrowCount; i++) {
+        // Ular makin panjang di level tinggi
+        let minLen = currentLevel > 3 ? 3 : 2;
+        let maxLen = currentLevel > 5 ? 6 : 4;
+        let length = Math.floor(Math.random() * (maxLen - minLen + 1)) + minLen;
         let color = colors[i % colors.length];
 
-        for (let attempt = 0; attempt < 150; attempt++) {
+        for (let attempt = 0; attempt < 200; attempt++) {
             let dir = dirs[Math.floor(Math.random() * dirs.length)];
             let hx = Math.floor(Math.random() * gridSize);
             let hy = Math.floor(Math.random() * gridSize);
 
             if (occupied[hy][hx]) continue;
 
-            // Cek apakah jalan ke luar tidak terhalang
+            // Cek apakah jalur ke depan kepala aman meluncur keluar
             let pathClearOut = true;
             let checkX = hx, checkY = hy;
             while (true) {
@@ -112,7 +124,7 @@ function initLevel() {
 
             if (!pathClearOut) continue;
 
-            // Badan ular dibuat ke BELAKANG kepala panah
+            // Buat badan ular di belakang kepala
             let path = [{x: hx, y: hy}];
             let currX = hx;
             let currY = hy;
@@ -125,7 +137,6 @@ function initLevel() {
                 let neighbors = [];
                 let ds = [];
                 
-                // Pada ruas pertama di belakang kepala, hindari membuat badan tepat di depan arah dorong
                 if (len === 1) {
                     if (dir !== 'LEFT') ds.push({x: 1, y: 0});
                     if (dir !== 'RIGHT') ds.push({x: -1, y: 0});
@@ -166,8 +177,8 @@ function initLevel() {
             }
         }
     }
+    resizeCanvas();
     updateUI();
-    draw();
 }
 
 function updateUI() {
@@ -206,13 +217,13 @@ audioBtn.addEventListener('click', () => {
     audioBtn.querySelector('.btn-icon').textContent = soundEnabled ? '🔊' : '🔇';
 });
 
-// Render Tampilan Papan & Ular Panah Presisi
+// Render Tampilan Papan & Panah Ramping
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Grid Papan Game
+    // Line Grid Papan Game
     ctx.strokeStyle = '#1e2942';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1;
     for (let i = 0; i <= gridSize; i++) {
         ctx.beginPath();
         ctx.moveTo(i * cellSize, 0);
@@ -225,15 +236,15 @@ function draw() {
         ctx.stroke();
     }
     
-    // Gambar Ular Berkelok + Kepala Panah Presisi
+    // Gambar Panah Berkelok Ramping
     arrows.forEach(a => {
         ctx.fillStyle = a.color;
         ctx.strokeStyle = a.color;
-        ctx.lineWidth = cellSize * 0.45;
+        ctx.lineWidth = cellSize * 0.32; // Ukuran ramping agar tidak besar/kegemukan
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // 1. Gambar Badan Ular
+        // 1. Badan Ular
         if (a.path.length > 1) {
             ctx.beginPath();
             let head = a.path[0];
@@ -245,11 +256,11 @@ function draw() {
             ctx.stroke();
         }
 
-        // 2. Gambar Kepala Panah Putih Pas Sesuai Arah Gerak (Anti-Kesenglek)
+        // 2. Ujung Panah Putih Presisi
         const head = a.path[0];
         const cx = (head.x + 0.5) * cellSize;
         const cy = (head.y + 0.5) * cellSize;
-        const rad = cellSize * 0.35;
+        const rad = cellSize * 0.28;
 
         ctx.save();
         ctx.translate(cx, cy);
@@ -275,7 +286,7 @@ function draw() {
     });
 }
 
-// Deteksi Klik / Tap Panah
+// Interaksi Tap
 canvas.addEventListener('pointerdown', (e) => {
     const rect = canvas.getBoundingClientRect();
     const touchX = e.clientX - rect.left;
@@ -344,5 +355,4 @@ function checkAndMove(index) {
     }
 }
 
-resizeCanvas();
 initLevel();
