@@ -18,22 +18,50 @@ let cellSize = 50;
 
 let arrows = [];
 
-// Sound Generator
+// Synthesizer Musik & Suara Lebih Menarik
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playSound(freq, type = 'sine', duration = 0.15) {
+
+function playTone(freq, duration, type = 'sine', delay = 0) {
     if (!soundEnabled) return;
-    try {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + duration);
-    } catch (e) {}
+    setTimeout(() => {
+        try {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        } catch (e) {}
+    }, delay * 1000);
+}
+
+function playSound(type) {
+    if (!soundEnabled) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    if (type === 'move') {
+        // Melodi Pop Meluncur
+        playTone(523.25, 0.1, 'triangle', 0);
+        playTone(659.25, 0.12, 'triangle', 0.05);
+    } else if (type === 'hit') {
+        // Suara Nabrak/Salah
+        playTone(180, 0.2, 'sawtooth', 0);
+        playTone(130, 0.25, 'sawtooth', 0.08);
+    } else if (type === 'win') {
+        // Jingle Kemenangan Singkat
+        playTone(523.25, 0.15, 'sine', 0);
+        playTone(659.25, 0.15, 'sine', 0.1);
+        playTone(783.99, 0.15, 'sine', 0.2);
+        playTone(1046.50, 0.3, 'triangle', 0.3);
+    } else if (type === 'buy') {
+        // Suara Beli Nyawa Koin
+        playTone(987.77, 0.1, 'sine', 0);
+        playTone(1318.51, 0.2, 'sine', 0.08);
+    }
 }
 
 function resizeCanvas() {
@@ -50,25 +78,27 @@ function resizeCanvas() {
 
 window.addEventListener('resize', resizeCanvas);
 
-// Logika Level Solvable (Bisa Diselesaikan & Tidak Macet)
+// Pembentukan Labirin Ular Rumit (Dijamin Bisa Diselesaikan & Tidak Macet)
 function initLevel() {
     arrows = [];
     const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
     const dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
     
     let occupied = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false));
-    let count = Math.min(3 + currentLevel, 8);
+    let count = Math.min(3 + currentLevel, 7);
 
     for (let i = 0; i < count; i++) {
-        let length = Math.floor(Math.random() * 2) + 2; // Panjang 2 - 3 kotak
+        let length = Math.floor(Math.random() * 3) + 3; // Panjang 3 - 5 Kotak (Berbelok-belok)
         let color = colors[i % colors.length];
 
-        for (let attempt = 0; attempt < 100; attempt++) {
+        for (let attempt = 0; attempt < 150; attempt++) {
             let dir = dirs[Math.floor(Math.random() * dirs.length)];
             let hx = Math.floor(Math.random() * gridSize);
             let hy = Math.floor(Math.random() * gridSize);
 
-            // Cek apakah jalur depan kepala panah kosong ke arah luar
+            if (occupied[hy][hx]) continue;
+
+            // Cek apakah jalur ke depan kepala panah aman keluar
             let pathClearOut = true;
             let checkX = hx, checkY = hy;
             while (true) {
@@ -86,25 +116,42 @@ function initLevel() {
 
             if (!pathClearOut) continue;
 
-            // Buat badan ular di belakang kepala
+            // Generator Badan Ular Berkelok-kelok (Random Walk Backwards)
             let path = [{x: hx, y: hy}];
-            let validBody = true;
+            let currX = hx;
+            let currY = hy;
+            let tempOccupied = JSON.parse(JSON.stringify(occupied));
+            tempOccupied[hy][hx] = true;
+
+            let success = true;
 
             for (let len = 1; len < length; len++) {
-                let bx = hx, by = hy;
-                if (dir === 'RIGHT') bx = hx - len;
-                if (dir === 'LEFT') bx = hx + len;
-                if (dir === 'DOWN') by = hy - len;
-                if (dir === 'UP') by = hy + len;
+                let neighbors = [];
+                let ds = [
+                    {x: 1, y: 0}, {x: -1, y: 0}, {x: 0, y: 1}, {x: 0, y: -1}
+                ];
 
-                if (bx < 0 || bx >= gridSize || by < 0 || by >= gridSize || occupied[by][bx]) {
-                    validBody = false;
+                for (let d of ds) {
+                    let nx = currX + d.x;
+                    let ny = currY + d.y;
+                    if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize && !tempOccupied[ny][nx]) {
+                        neighbors.push({x: nx, y: ny});
+                    }
+                }
+
+                if (neighbors.length === 0) {
+                    success = false;
                     break;
                 }
-                path.push({x: bx, y: by});
+
+                let nextPt = neighbors[Math.floor(Math.random() * neighbors.length)];
+                path.push(nextPt);
+                tempOccupied[nextPt.y][nextPt.x] = true;
+                currX = nextPt.x;
+                currY = nextPt.y;
             }
 
-            if (validBody && !occupied[hy][hx]) {
+            if (success) {
                 path.forEach(pt => occupied[pt.y][pt.x] = true);
                 arrows.push({
                     dir: dir,
@@ -136,7 +183,7 @@ buyLifeBtn.addEventListener('click', () => {
     if (lives < 3 && coins >= 50) {
         coins -= 50;
         lives += 1;
-        playSound(600, 'triangle', 0.2);
+        playSound('buy');
         updateUI();
     } else if (lives >= 3) {
         alert("Nyawa sudah penuh!");
@@ -146,20 +193,20 @@ buyLifeBtn.addEventListener('click', () => {
 });
 
 resetBtn.addEventListener('click', () => {
-    playSound(300, 'sine', 0.1);
+    playSound('move');
     initLevel();
 });
 
 audioBtn.addEventListener('click', () => {
     soundEnabled = !soundEnabled;
-    audioBtn.textContent = soundEnabled ? '🔊' : '🔇';
+    audioBtn.querySelector('.btn-icon').textContent = soundEnabled ? '🔊' : '🔇';
 });
 
-// Render Tampilan Papan & Ular Panah
+// Render Tampilan Papan & Ular Berkelok
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Line Grid Papan
+    // Grid Papan Game
     ctx.strokeStyle = '#1e2942';
     ctx.lineWidth = 1.5;
     for (let i = 0; i <= gridSize; i++) {
@@ -174,7 +221,7 @@ function draw() {
         ctx.stroke();
     }
     
-    // Gambar Ular Memanjang + Kepala Panah Putih
+    // Gambar Ular Berkelok + Ujung Panah Putih
     arrows.forEach(a => {
         ctx.fillStyle = a.color;
         ctx.strokeStyle = a.color;
@@ -182,7 +229,7 @@ function draw() {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // 1. Badan Ular Memanjang
+        // 1. Gambar Badan Ular Berkelok
         if (a.path.length > 1) {
             ctx.beginPath();
             let head = a.path[0];
@@ -194,7 +241,7 @@ function draw() {
             ctx.stroke();
         }
 
-        // 2. Kepala Panah di Depan
+        // 2. Gambar Kepala Panah di Depan
         const head = a.path[0];
         const cx = (head.x + 0.5) * cellSize;
         const cy = (head.y + 0.5) * cellSize;
@@ -259,7 +306,7 @@ function checkAndMove(index) {
     });
 
     if (blocked) {
-        playSound(150, 'sawtooth', 0.25);
+        playSound('hit');
         lives -= 1;
         updateUI();
 
@@ -276,7 +323,7 @@ function checkAndMove(index) {
             }, 150);
         }
     } else {
-        playSound(440, 'sine', 0.15);
+        playSound('move');
         arrows.splice(index, 1);
         coins += 20;
         updateUI();
@@ -284,7 +331,7 @@ function checkAndMove(index) {
 
         if (arrows.length === 0) {
             setTimeout(() => {
-                playSound(800, 'sine', 0.3);
+                playSound('win');
                 alert(`Luar Biasa! Level ${currentLevel} Selesai 🎉`);
                 currentLevel++;
                 initLevel();
