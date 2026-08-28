@@ -18,7 +18,7 @@ let cellSize = 50;
 
 let arrows = [];
 
-// Synthesizer Musik & Suara Lebih Menarik
+// Synthesizer Musik & Suara
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playTone(freq, duration, type = 'sine', delay = 0) {
@@ -44,21 +44,17 @@ function playSound(type) {
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
     if (type === 'move') {
-        // Melodi Pop Meluncur
         playTone(523.25, 0.1, 'triangle', 0);
         playTone(659.25, 0.12, 'triangle', 0.05);
     } else if (type === 'hit') {
-        // Suara Nabrak/Salah
         playTone(180, 0.2, 'sawtooth', 0);
         playTone(130, 0.25, 'sawtooth', 0.08);
     } else if (type === 'win') {
-        // Jingle Kemenangan Singkat
         playTone(523.25, 0.15, 'sine', 0);
         playTone(659.25, 0.15, 'sine', 0.1);
         playTone(783.99, 0.15, 'sine', 0.2);
         playTone(1046.50, 0.3, 'triangle', 0.3);
     } else if (type === 'buy') {
-        // Suara Beli Nyawa Koin
         playTone(987.77, 0.1, 'sine', 0);
         playTone(1318.51, 0.2, 'sine', 0.08);
     }
@@ -78,7 +74,7 @@ function resizeCanvas() {
 
 window.addEventListener('resize', resizeCanvas);
 
-// Pembentukan Labirin Ular Rumit (Dijamin Bisa Diselesaikan & Tidak Macet)
+// Pembentukan Labirin Ular Rumit (Bisa Diselesaikan)
 function initLevel() {
     arrows = [];
     const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
@@ -88,7 +84,7 @@ function initLevel() {
     let count = Math.min(3 + currentLevel, 7);
 
     for (let i = 0; i < count; i++) {
-        let length = Math.floor(Math.random() * 3) + 3; // Panjang 3 - 5 Kotak (Berbelok-belok)
+        let length = Math.floor(Math.random() * 3) + 3; // Panjang 3 - 5 Kotak
         let color = colors[i % colors.length];
 
         for (let attempt = 0; attempt < 150; attempt++) {
@@ -98,7 +94,7 @@ function initLevel() {
 
             if (occupied[hy][hx]) continue;
 
-            // Cek apakah jalur ke depan kepala panah aman keluar
+            // Cek apakah jalan ke luar tidak terhalang
             let pathClearOut = true;
             let checkX = hx, checkY = hy;
             while (true) {
@@ -116,7 +112,7 @@ function initLevel() {
 
             if (!pathClearOut) continue;
 
-            // Generator Badan Ular Berkelok-kelok (Random Walk Backwards)
+            // Badan ular dibuat ke BELAKANG kepala panah
             let path = [{x: hx, y: hy}];
             let currX = hx;
             let currY = hy;
@@ -127,9 +123,17 @@ function initLevel() {
 
             for (let len = 1; len < length; len++) {
                 let neighbors = [];
-                let ds = [
-                    {x: 1, y: 0}, {x: -1, y: 0}, {x: 0, y: 1}, {x: 0, y: -1}
-                ];
+                let ds = [];
+                
+                // Pada ruas pertama di belakang kepala, hindari membuat badan tepat di depan arah dorong
+                if (len === 1) {
+                    if (dir !== 'LEFT') ds.push({x: 1, y: 0});
+                    if (dir !== 'RIGHT') ds.push({x: -1, y: 0});
+                    if (dir !== 'UP') ds.push({x: 0, y: 1});
+                    if (dir !== 'DOWN') ds.push({x: 0, y: -1});
+                } else {
+                    ds = [{x: 1, y: 0}, {x: -1, y: 0}, {x: 0, y: 1}, {x: 0, y: -1}];
+                }
 
                 for (let d of ds) {
                     let nx = currX + d.x;
@@ -202,7 +206,7 @@ audioBtn.addEventListener('click', () => {
     audioBtn.querySelector('.btn-icon').textContent = soundEnabled ? '🔊' : '🔇';
 });
 
-// Render Tampilan Papan & Ular Berkelok
+// Render Tampilan Papan & Ular Panah Presisi
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -221,7 +225,7 @@ function draw() {
         ctx.stroke();
     }
     
-    // Gambar Ular Berkelok + Ujung Panah Putih
+    // Gambar Ular Berkelok + Kepala Panah Presisi
     arrows.forEach(a => {
         ctx.fillStyle = a.color;
         ctx.strokeStyle = a.color;
@@ -229,7 +233,7 @@ function draw() {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // 1. Gambar Badan Ular Berkelok
+        // 1. Gambar Badan Ular
         if (a.path.length > 1) {
             ctx.beginPath();
             let head = a.path[0];
@@ -241,7 +245,7 @@ function draw() {
             ctx.stroke();
         }
 
-        // 2. Gambar Kepala Panah di Depan
+        // 2. Gambar Kepala Panah Putih Pas Sesuai Arah Gerak (Anti-Kesenglek)
         const head = a.path[0];
         const cx = (head.x + 0.5) * cellSize;
         const cy = (head.y + 0.5) * cellSize;
@@ -260,10 +264,10 @@ function draw() {
 
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.moveTo(rad * 0.8, 0);
-        ctx.lineTo(-rad * 0.4, -rad * 0.6);
+        ctx.moveTo(rad * 0.7, 0);
+        ctx.lineTo(-rad * 0.4, -rad * 0.5);
         ctx.lineTo(-rad * 0.1, 0);
-        ctx.lineTo(-rad * 0.4, rad * 0.6);
+        ctx.lineTo(-rad * 0.4, rad * 0.5);
         ctx.closePath();
         ctx.fill();
 
