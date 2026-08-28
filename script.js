@@ -8,22 +8,18 @@ const buyLifeBtn = document.getElementById('buyLifeBtn');
 const resetBtn = document.getElementById('resetBtn');
 const audioBtn = document.getElementById('audioBtn');
 
-// Game State
 let currentLevel = 1;
-let coins = 100; // Modal awal koin untuk coba fitur beli nyawa
-let lives = 2;   // Mulai dari 2 agar bisa dicoba dibeli jadi 3
+let coins = 100;
+let lives = 3;
 let soundEnabled = true;
 
-// Grid and Arena settings
 const gridSize = 6;
 let cellSize = 50;
 
-// Arrows data
 let arrows = [];
 
-// Audio Web Audio API Synthetic Sound (Tanpa file eksternal)
+// Sound Generator
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
 function playSound(freq, type = 'sine', duration = 0.15) {
     if (!soundEnabled) return;
     try {
@@ -54,27 +50,69 @@ function resizeCanvas() {
 
 window.addEventListener('resize', resizeCanvas);
 
+// Logika Level Solvable (Bisa Diselesaikan & Tidak Macet)
 function initLevel() {
     arrows = [];
+    const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
     const dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
-    const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
     
-    let count = Math.min(6 + currentLevel * 2, 20);
-    
+    let occupied = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false));
+    let count = Math.min(3 + currentLevel, 8);
+
     for (let i = 0; i < count; i++) {
-        let x = Math.floor(Math.random() * (gridSize - 2)) + 1;
-        let y = Math.floor(Math.random() * (gridSize - 2)) + 1;
-        
-        if (!arrows.some(a => a.x === x && a.y === y)) {
-            arrows.push({
-                x: x,
-                y: y,
-                dir: dirs[Math.floor(Math.random() * dirs.length)],
-                color: colors[Math.floor(Math.random() * colors.length)],
-                moving: false,
-                vx: 0,
-                vy: 0
-            });
+        let length = Math.floor(Math.random() * 2) + 2; // Panjang 2 - 3 kotak
+        let color = colors[i % colors.length];
+
+        for (let attempt = 0; attempt < 100; attempt++) {
+            let dir = dirs[Math.floor(Math.random() * dirs.length)];
+            let hx = Math.floor(Math.random() * gridSize);
+            let hy = Math.floor(Math.random() * gridSize);
+
+            // Cek apakah jalur depan kepala panah kosong ke arah luar
+            let pathClearOut = true;
+            let checkX = hx, checkY = hy;
+            while (true) {
+                if (dir === 'RIGHT') checkX++;
+                if (dir === 'LEFT') checkX--;
+                if (dir === 'DOWN') checkY++;
+                if (dir === 'UP') checkY--;
+
+                if (checkX < 0 || checkX >= gridSize || checkY < 0 || checkY >= gridSize) break;
+                if (occupied[checkY][checkX]) {
+                    pathClearOut = false;
+                    break;
+                }
+            }
+
+            if (!pathClearOut) continue;
+
+            // Buat badan ular di belakang kepala
+            let path = [{x: hx, y: hy}];
+            let validBody = true;
+
+            for (let len = 1; len < length; len++) {
+                let bx = hx, by = hy;
+                if (dir === 'RIGHT') bx = hx - len;
+                if (dir === 'LEFT') bx = hx + len;
+                if (dir === 'DOWN') by = hy - len;
+                if (dir === 'UP') by = hy + len;
+
+                if (bx < 0 || bx >= gridSize || by < 0 || by >= gridSize || occupied[by][bx]) {
+                    validBody = false;
+                    break;
+                }
+                path.push({x: bx, y: by});
+            }
+
+            if (validBody && !occupied[hy][hx]) {
+                path.forEach(pt => occupied[pt.y][pt.x] = true);
+                arrows.push({
+                    dir: dir,
+                    color: color,
+                    path: path
+                });
+                break;
+            }
         }
     }
     updateUI();
@@ -85,22 +123,15 @@ function updateUI() {
     levelNumEl.textContent = currentLevel;
     coinCountEl.textContent = coins;
     
-    // Update Lives Display
     let hearts = '';
     for (let i = 0; i < 3; i++) {
         hearts += i < lives ? '❤️ ' : '🖤 ';
     }
     livesDisplayEl.textContent = hearts.trim();
     
-    // Status Tombol Beli Nyawa
-    if (lives >= 3 || coins < 50) {
-        buyLifeBtn.style.opacity = '0.6';
-    } else {
-        buyLifeBtn.style.opacity = '1';
-    }
+    buyLifeBtn.style.opacity = (lives >= 3 || coins < 50) ? '0.6' : '1';
 }
 
-// Beli Nyawa Function
 buyLifeBtn.addEventListener('click', () => {
     if (lives < 3 && coins >= 50) {
         coins -= 50;
@@ -108,9 +139,9 @@ buyLifeBtn.addEventListener('click', () => {
         playSound(600, 'triangle', 0.2);
         updateUI();
     } else if (lives >= 3) {
-        alert("Nyawa Anda sudah penuh! (Maksimal 3)");
+        alert("Nyawa sudah penuh!");
     } else {
-        alert("Koin tidak cukup! Butuh 50 🪙");
+        alert("Koin tidak cukup!");
     }
 });
 
@@ -124,12 +155,13 @@ audioBtn.addEventListener('click', () => {
     audioBtn.textContent = soundEnabled ? '🔊' : '🔇';
 });
 
+// Render Tampilan Papan & Ular Panah
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw Grid
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 1;
+    // Line Grid Papan
+    ctx.strokeStyle = '#1e2942';
+    ctx.lineWidth = 1.5;
     for (let i = 0; i <= gridSize; i++) {
         ctx.beginPath();
         ctx.moveTo(i * cellSize, 0);
@@ -142,38 +174,57 @@ function draw() {
         ctx.stroke();
     }
     
-    // Draw Arrows
+    // Gambar Ular Memanjang + Kepala Panah Putih
     arrows.forEach(a => {
-        const cx = (a.x + 0.5) * cellSize;
-        const cy = (a.y + 0.5) * cellSize;
+        ctx.fillStyle = a.color;
+        ctx.strokeStyle = a.color;
+        ctx.lineWidth = cellSize * 0.45;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // 1. Badan Ular Memanjang
+        if (a.path.length > 1) {
+            ctx.beginPath();
+            let head = a.path[0];
+            ctx.moveTo((head.x + 0.5) * cellSize, (head.y + 0.5) * cellSize);
+            for (let i = 1; i < a.path.length; i++) {
+                let pt = a.path[i];
+                ctx.lineTo((pt.x + 0.5) * cellSize, (pt.y + 0.5) * cellSize);
+            }
+            ctx.stroke();
+        }
+
+        // 2. Kepala Panah di Depan
+        const head = a.path[0];
+        const cx = (head.x + 0.5) * cellSize;
+        const cy = (head.y + 0.5) * cellSize;
         const rad = cellSize * 0.35;
-        
+
         ctx.save();
         ctx.translate(cx, cy);
-        
+
         let angle = 0;
         if (a.dir === 'RIGHT') angle = 0;
         if (a.dir === 'DOWN') angle = Math.PI / 2;
         if (a.dir === 'LEFT') angle = Math.PI;
         if (a.dir === 'UP') angle = -Math.PI / 2;
-        
+
         ctx.rotate(angle);
-        
-        // Arrow Shape
-        ctx.fillStyle = a.color;
+
+        ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.moveTo(rad, 0);
-        ctx.lineTo(-rad * 0.6, -rad * 0.7);
-        ctx.lineTo(-rad * 0.2, 0);
-        ctx.lineTo(-rad * 0.6, rad * 0.7);
+        ctx.moveTo(rad * 0.8, 0);
+        ctx.lineTo(-rad * 0.4, -rad * 0.6);
+        ctx.lineTo(-rad * 0.1, 0);
+        ctx.lineTo(-rad * 0.4, rad * 0.6);
         ctx.closePath();
         ctx.fill();
-        
+
         ctx.restore();
     });
 }
 
-// Touch & Click Event Handling
+// Deteksi Klik / Tap Panah
 canvas.addEventListener('pointerdown', (e) => {
     const rect = canvas.getBoundingClientRect();
     const touchX = e.clientX - rect.left;
@@ -182,7 +233,10 @@ canvas.addEventListener('pointerdown', (e) => {
     const gx = Math.floor(touchX / cellSize);
     const gy = Math.floor(touchY / cellSize);
     
-    const clickedIndex = arrows.findIndex(a => a.x === gx && a.y === gy && !a.moving);
+    const clickedIndex = arrows.findIndex(a => 
+        a.path.some(pt => pt.x === gx && pt.y === gy)
+    );
+
     if (clickedIndex !== -1) {
         checkAndMove(clickedIndex);
     }
@@ -190,29 +244,29 @@ canvas.addEventListener('pointerdown', (e) => {
 
 function checkAndMove(index) {
     const a = arrows[index];
+    const head = a.path[0];
     let blocked = false;
-    
-    // Cek tabrakan di jalur panah
+
     arrows.forEach((other, oIdx) => {
         if (oIdx !== index) {
-            if (a.dir === 'RIGHT' && other.y === a.y && other.x > a.x) blocked = true;
-            if (a.dir === 'LEFT' && other.y === a.y && other.x < a.x) blocked = true;
-            if (a.dir === 'DOWN' && other.x === a.x && other.y > a.y) blocked = true;
-            if (a.dir === 'UP' && other.x === a.x && other.y < a.y) blocked = true;
+            other.path.forEach(pt => {
+                if (a.dir === 'RIGHT' && pt.y === head.y && pt.x > head.x) blocked = true;
+                if (a.dir === 'LEFT' && pt.y === head.y && pt.x < head.x) blocked = true;
+                if (a.dir === 'DOWN' && pt.x === head.x && pt.y > head.y) blocked = true;
+                if (a.dir === 'UP' && pt.x === head.x && pt.y < head.y) blocked = true;
+            });
         }
     });
-    
+
     if (blocked) {
-        // Tabrakan -> Nyawa berkurang
         playSound(150, 'sawtooth', 0.25);
         lives -= 1;
         updateUI();
-        
-        // Shake Canvas
-        canvas.style.transform = 'translate(4px, 0)';
-        setTimeout(() => canvas.style.transform = 'translate(-4px, 0)', 50);
+
+        canvas.style.transform = 'translate(5px, 0)';
+        setTimeout(() => canvas.style.transform = 'translate(-5px, 0)', 50);
         setTimeout(() => canvas.style.transform = 'translate(0, 0)', 100);
-        
+
         if (lives <= 0) {
             setTimeout(() => {
                 alert("Game Over! Nyawa Habis.");
@@ -222,17 +276,16 @@ function checkAndMove(index) {
             }, 150);
         }
     } else {
-        // Berhasil Keluar
         playSound(440, 'sine', 0.15);
         arrows.splice(index, 1);
-        coins += 10;
+        coins += 20;
         updateUI();
         draw();
-        
+
         if (arrows.length === 0) {
             setTimeout(() => {
                 playSound(800, 'sine', 0.3);
-                alert(`Selamat! Level ${currentLevel} Selesai 🎉`);
+                alert(`Luar Biasa! Level ${currentLevel} Selesai 🎉`);
                 currentLevel++;
                 initLevel();
             }, 200);
@@ -240,6 +293,5 @@ function checkAndMove(index) {
     }
 }
 
-// Start Game
 resizeCanvas();
 initLevel();
