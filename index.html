@@ -3,37 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Labirin Panah Bertingkat</title>
+    <title>Arrow Maze Master</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="theme-blue">
     <div class="game-container">
-        <!-- Header Atas -->
+        <!-- Header Atas Persis Gambar -->
         <div class="header">
-            <div class="badge level-badge">⭐ Level <span id="level-num">1</span></div>
-            <div class="badge coin-badge">🪙 <span id="coin-count">100</span></div>
-            <div class="lives-container" id="lives-display">❤️ ❤️ ❤️</div>
+            <div class="level-pill">
+                <span class="star-icon">★</span> Level <span id="level-num">1</span>
+            </div>
+            <div class="lives-pill" id="lives-display">
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+            </div>
         </div>
 
-        <!-- Area Game Canvas -->
+        <!-- Area Main Canvas Padat -->
         <div class="canvas-wrapper">
             <canvas id="gameCanvas"></canvas>
         </div>
 
-        <!-- Control Bar Bawah -->
-        <div class="footer-controls">
-            <button class="icon-btn purple-btn" id="resetBtn" title="Reset Level">
-                <span class="btn-icon">🎨</span>
-                <span class="btn-text">Reset</span>
-            </button>
-            <button class="icon-btn green-btn" id="audioBtn" title="Suara">
-                <span class="btn-icon">🔊</span>
-                <span class="btn-text">Musik</span>
-            </button>
-            <button class="buy-life-btn" id="buyLifeBtn">
-                <span class="btn-icon">➕ ❤️</span>
-                <span class="btn-text">(50 🪙)</span>
-            </button>
+        <!-- Footer Control Bar Persis Gambar -->
+        <div class="footer-bar">
+            <button class="footer-btn btn-palette" id="themeBtn" title="Ganti Tema Warna">🎨</button>
+            <button class="footer-btn btn-settings" id="audioBtn" title="Pengaturan Suara">⚙️</button>
+            <div class="zoom-slider-container">
+                <span class="zoom-icon">—</span>
+                <div class="zoom-track">
+                    <div class="zoom-thumb"></div>
+                </div>
+                <span class="zoom-icon">+</span>
+            </div>
+            <button class="footer-btn btn-menu" id="resetBtn" title="Reset Level">⣿</button>
         </div>
     </div>
 
