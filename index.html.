@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Labirin Panah: Misi Lolos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="level-badge">⭐ Level <span id="level-num">1</span></div>
+            <div class="coin-badge">🪙 <span id="coin-count">0</span></div>
+            <div class="lives" id="lives-display">❤️ ❤️ ❤️</div>
+        </div>
+
+        <!-- Canvas Game Arena -->
+        <div class="canvas-wrapper">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="bottom-bar">
+            <button class="icon-btn purple" id="resetBtn" title="Reset Level">🎨</button>
+            <button class="icon-btn green" id="audioBtn" title="Musik/Suara">🔊</button>
+            <button class="buy-life-btn" id="buyLifeBtn">➕ ❤️ (50 🪙)</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
