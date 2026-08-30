@@ -232,51 +232,43 @@ function updateUI() {
     });
 }
 
-// FUNGSI MENGGAMBAR PANAH SESUAI GAMBAR CONTOH
+ // Render Panah: Ujung Depan 1 Sudut Lancip Murni, Belakang Lurus Rata
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     arrows.forEach(a => {
         const path = a.path;
         const head = path[0]; // Ujung Depan (Kepala Panah)
-        const tail = path[path.length - 1]; // Ujung Belakang (Ekor)
+        const tail = path[path.length - 1]; // Ujung Belakang
 
         const drawColor = a.hitHighlight ? '#ef4444' : currentArrowColor;
 
-        // 1. Gambar Badan Line Tegak/Meliuk
+        // 1. Gambar Garis/Badan Meliuk
         ctx.strokeStyle = drawColor;
         ctx.lineWidth = cellSize * 0.28;
-        ctx.lineCap = 'butt';
+        ctx.lineCap = 'butt'; // Ujung belakang potongan lurus rata
         ctx.lineJoin = 'miter';
 
         ctx.beginPath();
-        // Dimulai sedikit di belakang titik pusat kepala panah agar menyatu dengan segitiga
-        let startX = (head.x + 0.5) * cellSize;
-        let startY = (head.y + 0.5) * cellSize;
-
-        if (a.dir === 'RIGHT') startX -= cellSize * 0.1;
-        if (a.dir === 'LEFT')  startX += cellSize * 0.1;
-        if (a.dir === 'DOWN')  startY -= cellSize * 0.1;
-        if (a.dir === 'UP')    startY += cellSize * 0.1;
-
-        ctx.moveTo(startX, startY);
+        // Memulai garis tepat dari tengah sel kepala panah
+        ctx.moveTo((head.x + 0.5) * cellSize, (head.y + 0.5) * cellSize);
 
         for (let i = 1; i < path.length; i++) {
             ctx.lineTo((path[i].x + 0.5) * cellSize, (path[i].y + 0.5) * cellSize);
         }
         ctx.stroke();
 
-        // 2. Gambar Kepala Panah Segitiga Lancip di Ujung Paling Depan
+        // 2. Gambar Segitiga Lancip Sempurna di Ujung Depan (1 Sudut Lancip Terdepan, Belakang Lurus)
         const headCx = (head.x + 0.5) * cellSize;
         const headCy = (head.y + 0.5) * cellSize;
 
-        const arrowLength = cellSize * 0.48; // Panjang Ujung Lancip
-        const arrowWidth = cellSize * 0.38;  // Lebar Kepala Panah
+        const arrowLen = cellSize * 0.42;   // Jarak Ujung Lancip ke Depan
+        const arrowWidth = cellSize * 0.35; // Lebar Alas Segitiga
 
         ctx.save();
         ctx.translate(headCx, headCy);
 
-        // Menentukan Rotasi Sesuai Arah Gerak
+        // Rotasi Arah Segitiga
         let angle = 0;
         if (a.dir === 'RIGHT') angle = 0;
         if (a.dir === 'DOWN')  angle = Math.PI / 2;
@@ -285,12 +277,12 @@ function draw() {
 
         ctx.rotate(angle);
 
-        // Menggambar Segitiga Lancip
+        // Segitiga Murni: 1 Sudut Lancip di Depan, Garis Belakang Lurus Rata
         ctx.fillStyle = drawColor;
         ctx.beginPath();
-        ctx.moveTo(arrowLength, 0); // Point Lancip Terdepan
-        ctx.lineTo(-arrowLength * 0.4, -arrowWidth); // Sayap Kiri
-        ctx.lineTo(-arrowLength * 0.4, arrowWidth);  // Sayap Kanan
+        ctx.moveTo(arrowLen, 0);                 // 1. Titik Ujung Lancip Terdepan
+        ctx.lineTo(-arrowLen * 0.2, -arrowWidth); // 2. Sudut Kiri Belakang
+        ctx.lineTo(-arrowLen * 0.2, arrowWidth);  // 3. Sudut Kanan Belakang (Garis Belakang Lurus Rata)
         ctx.closePath();
         ctx.fill();
 
