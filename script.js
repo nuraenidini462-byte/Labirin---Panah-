@@ -5,7 +5,7 @@ const levelNumEl = document.getElementById('level-num');
 const coinCountEl = document.getElementById('coin-count');
 const livesDisplayEl = document.getElementById('lives-display');
 
-// UI Modals & Start Screen
+// UI Modals
 const bgModal = document.getElementById('bgModal');
 const settingsModal = document.getElementById('settingsModal');
 const gameOverModal = document.getElementById('gameOverModal');
@@ -17,7 +17,7 @@ let lives = 3;
 let isSfxOn = true;
 let isMusicOn = true;
 let isVibrateOn = true;
-let isGameStarted = false; // Status apakah game sudah dimulai
+let isGameStarted = false;
 
 // Audio System
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -136,11 +136,17 @@ let rows = 8;
 let cellSize = 40;
 let arrows = [];
 
+// SIZING SECURE & TIDAK NGE-BLANK
 function resizeCanvas() {
     const wrapper = document.querySelector('.canvas-wrapper');
-    if (!wrapper) return;
-    const cellW = wrapper.clientWidth / cols;
-    const cellH = wrapper.clientHeight / rows;
+    let width = wrapper ? wrapper.clientWidth : window.innerWidth;
+    let height = wrapper ? wrapper.clientHeight : window.innerHeight * 0.7;
+
+    if (width === 0) width = window.innerWidth * 0.9;
+    if (height === 0) height = window.innerHeight * 0.65;
+
+    const cellW = width / cols;
+    const cellH = height / rows;
     cellSize = Math.min(cellW, cellH);
 
     canvas.width = cols * cellSize;
@@ -182,5 +188,208 @@ function initLevel() {
 
         if (!pathClearOut) continue;
 
-        let targetLen = Math.floor(Math.random() * 4) + 3
-         
+        let targetLen = Math.floor(Math.random() * 4) + 3;
+        let path = [{x: hx, y: hy}];
+        let tempOccupied = JSON.parse(JSON.stringify(occupied));
+        tempOccupied[hy][hx] = true;
+
+        let currX = hx, currY = hy;
+
+        for (let l = 1; l < targetLen; l++) {
+            let ds = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+            let neighbors = [];
+            for (let d of ds) {
+                let nx = currX + d.x, ny = currY + d.y;
+                if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && !tempOccupied[ny][nx]) {
+                    neighbors.push({x: nx, y: ny});
+                }
+            }
+
+            if (neighbors.length === 0) break;
+            let nextPt = neighbors[Math.floor(Math.random() * neighbors.length)];
+            path.push(nextPt);
+            tempOccupied[nextPt.y][nextPt.x] = true;
+            currX = nextPt.x; currY = nextPt.y;
+        }
+
+        if (path.length >= 2) {
+            path.forEach(pt => occupied[pt.y][pt.x] = true);
+            arrows.push({ dir: dir, path: path, hitHighlight: false });
+        }
+    }
+
+    resizeCanvas();
+    updateUI();
+}
+
+function updateUI() {
+    levelNumEl.textContent = currentLevel;
+    coinCountEl.textContent = coins;
+    const hearts = livesDisplayEl.querySelectorAll('.heart');
+    hearts.forEach((h, idx) => {
+        if (idx < lives) h.classList.add('active');
+        else h.classList.remove('active');
+    });
+}
+
+// DESAIN CANVAS & MULAI GAME
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. Gambar Panah Utuh Menyatu
+    arrows.forEach(a => {
+        const path = a.path;
+        const head = path[0];
+
+        const drawColor = a.hitHighlight ? '#ef4444' : currentArrowColor;
+        const headCx = (head.x + 0.5) * cellSize;
+        const headCy = (head.y + 0.5) * cellSize;
+
+        ctx.strokeStyle = drawColor;
+        ctx.lineWidth = cellSize * 0.28;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(headCx, headCy);
+
+        for (let i = 1; i < path.length; i++) {
+            ctx.lineTo((path[i].x + 0.5) * cellSize, (path[i].y + 0.5) * cellSize);
+        }
+        ctx.stroke();
+
+        const headRadius = cellSize * 0.38;
+
+        ctx.save();
+        ctx.translate(headCx, headCy);
+
+        let angle = 0;
+        if (a.dir === 'RIGHT') angle = 0;
+        if (a.dir === 'DOWN')  angle = Math.PI / 2;
+        if (a.dir === 'LEFT')  angle = Math.PI;
+        if (a.dir === 'UP')    angle = -Math.PI / 2;
+
+        ctx.rotate(angle);
+
+        ctx.fillStyle = drawColor;
+        ctx.beginPath();
+        ctx.moveTo(headRadius, 0);
+        ctx.lineTo(-headRadius * 0.6, -headRadius * 0.75);
+        ctx.lineTo(-headRadius * 0.2, 0);
+        ctx.lineTo(-headRadius * 0.6, headRadius * 0.75);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+    });
+
+    // 2. TOMBOL MULAI GAME
+    if (!isGameStarted) {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const btnW = Math.min(220, canvas.width * 0.7);
+        const btnH = 46;
+        const btnX = (canvas.width - btnW) / 2;
+        const btnY = (canvas.height - btnH) / 2;
+
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(btnX, btnY, btnW, btnH);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Mulai Game', canvas.width / 2, canvas.height / 2);
+    }
+}
+
+// TOUCH / CLICK HANDLER
+canvas.addEventListener('pointerdown', (e) => {
+    if (!isGameStarted) {
+        isGameStarted = true;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        startBGM();
+        draw();
+        return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const touchX = e.clientX - rect.left;
+    const touchY = e.clientY - rect.top;
+
+    const gx = Math.floor(touchX / cellSize);
+    const gy = Math.floor(touchY / cellSize);
+
+    const clickedIdx = arrows.findIndex(a =>
+        a.path.some(pt => pt.x === gx && pt.y === gy)
+    );
+
+    if (clickedIdx !== -1) {
+        checkAndMove(clickedIdx);
+    }
+});
+
+function checkAndMove(index) {
+    const a = arrows[index];
+    const head = a.path[0];
+    let blocked = false;
+    let blockingArrow = null;
+
+    arrows.forEach((other, oIdx) => {
+        if (oIdx !== index) {
+            other.path.forEach(pt => {
+                if (a.dir === 'RIGHT' && pt.y === head.y && pt.x > head.x) { blocked = true; blockingArrow = other; }
+                if (a.dir === 'LEFT'  && pt.y === head.y && pt.x < head.x) { blocked = true; blockingArrow = other; }
+                if (a.dir === 'DOWN'  && pt.x === head.x && pt.y > head.y) { blocked = true; blockingArrow = other; }
+                if (a.dir === 'UP'    && pt.x === head.x && pt.y < head.y) { blocked = true; blockingArrow = other; }
+            });
+        }
+    });
+
+    if (blocked) {
+        playSound('hit');
+        triggerVibrate();
+
+        if (blockingArrow) {
+            blockingArrow.hitHighlight = true;
+            draw();
+            setTimeout(() => {
+                blockingArrow.hitHighlight = false;
+                draw();
+            }, 300);
+        }
+
+        lives -= 1;
+        updateUI();
+
+        if (lives <= 0) {
+            setTimeout(() => {
+                gameOverModal.classList.remove('hidden');
+            }, 350);
+        }
+    } else {
+        playSound('move');
+        arrows.splice(index, 1);
+        draw();
+
+        if (arrows.length === 0) {
+            setTimeout(() => {
+                playSound('win');
+                coins += 20;
+                currentLevel++;
+                lives = 3;
+                initLevel();
+            }, 200);
+        }
+    }
+}
+
+// Pastikan dimuat dengan aman
+window.addEventListener('load', () => {
+    initLevel();
+});
+setTimeout(() => {
+    initLevel();
+}, 200);
+        
