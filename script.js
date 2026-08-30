@@ -19,7 +19,7 @@ document.getElementById('closeSettingsBtn').addEventListener('click', () => sett
 
 document.getElementById('closeGameOverBtn').addEventListener('click', () => gameOverModal.classList.add('hidden'));
 
-// Game States: LEVEL MULAI DARI 1
+// Game States: Level Mulai dari 1
 let currentLevel = 1;
 let coins = 100;
 let lives = 3;
@@ -49,7 +49,7 @@ function playTone(freq, duration, type = 'square', vol = 0.05) {
 }
 
 function playSound(type) {
-    if (type === 'move') playTone(587.33, 0.1, 'triangle', 0.1); // D5
+    if (type === 'move') playTone(587.33, 0.1, 'triangle', 0.1);
     if (type === 'hit')  playTone(150, 0.25, 'sawtooth', 0.12);
     if (type === 'win')  {
         playTone(523.25, 0.1, 'square', 0.1);
@@ -58,7 +58,7 @@ function playSound(type) {
     }
 }
 
-// Lagu Latar Ceria & Menarik (Catchy Melody)
+// Lagu Latar
 function startCatchyBGM() {
     if (bgmTimer) clearInterval(bgmTimer);
     const melody = [
@@ -92,7 +92,7 @@ document.getElementById('sfxToggle').addEventListener('change', (e) => isSfxOn =
 document.getElementById('musicToggle').addEventListener('change', (e) => isMusicOn = e.target.checked);
 document.getElementById('vibrateToggle').addEventListener('change', (e) => isVibrateOn = e.target.checked);
 
-// Pembelian Nyawa Koin
+// Pembelian Nyawa Pakai Koin
 function buyLivesWithCoins() {
     if (coins >= 50) {
         coins -= 50;
@@ -138,7 +138,6 @@ document.querySelectorAll('.bg-opt-btn').forEach(btn => {
     });
 });
 
-// Generator Ukuran Grid Sesuai Level
 let cols = 6;
 let rows = 8;
 let cellSize = 40;
@@ -159,9 +158,8 @@ window.addEventListener('resize', resizeCanvas);
 
 function initLevel() {
     arrows = [];
-    // Penyesuaian Tingkat Kesulitan Berdasarkan Level
-    cols = Math.min(14, 5 + Math.floor(currentLevel / 2));
-    rows = Math.min(18, 7 + Math.floor(currentLevel / 2));
+    cols = Math.min(12, 5 + Math.floor(currentLevel / 2));
+    rows = Math.min(16, 7 + Math.floor(currentLevel / 2));
 
     let occupied = Array(rows).fill(null).map(() => Array(cols).fill(false));
     const dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
@@ -190,13 +188,12 @@ function initLevel() {
 
         if (!pathClearOut) continue;
 
-        let targetLen = Math.floor(Math.random() * 4) + 2;
+        let targetLen = Math.floor(Math.random() * 5) + 3;
         let path = [{x: hx, y: hy}];
         let tempOccupied = JSON.parse(JSON.stringify(occupied));
         tempOccupied[hy][hx] = true;
 
         let currX = hx, currY = hy;
-        let success = true;
 
         for (let l = 1; l < targetLen; l++) {
             let ds = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
@@ -215,7 +212,7 @@ function initLevel() {
             currX = nextPt.x; currY = nextPt.y;
         }
 
-        if (success && path.length >= 2) {
+        if (path.length >= 2) {
             path.forEach(pt => occupied[pt.y][pt.x] = true);
             arrows.push({ dir: dir, path: path, hitHighlight: false });
         }
@@ -235,48 +232,51 @@ function updateUI() {
     });
 }
 
-// Render Panah dengan Ujung Lancip Menunjukkan Arah Keluar
+// FUNGSI MENGGAMBAR PANAH SESUAI GAMBAR CONTOH
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     arrows.forEach(a => {
         const path = a.path;
-        const head = path[0]; // Ujung Depan / Kepala Panah
-        const tail = path[path.length - 1]; // Ujung Buntut Panah
+        const head = path[0]; // Ujung Depan (Kepala Panah)
+        const tail = path[path.length - 1]; // Ujung Belakang (Ekor)
 
         const drawColor = a.hitHighlight ? '#ef4444' : currentArrowColor;
 
-        // 1. Gambar Jalur/Badan Panah
+        // 1. Gambar Badan Line Tegak/Meliuk
         ctx.strokeStyle = drawColor;
-        ctx.lineWidth = cellSize * 0.30;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        ctx.lineWidth = cellSize * 0.28;
+        ctx.lineCap = 'butt';
+        ctx.lineJoin = 'miter';
 
         ctx.beginPath();
-        ctx.moveTo((head.x + 0.5) * cellSize, (head.y + 0.5) * cellSize);
+        // Dimulai sedikit di belakang titik pusat kepala panah agar menyatu dengan segitiga
+        let startX = (head.x + 0.5) * cellSize;
+        let startY = (head.y + 0.5) * cellSize;
+
+        if (a.dir === 'RIGHT') startX -= cellSize * 0.1;
+        if (a.dir === 'LEFT')  startX += cellSize * 0.1;
+        if (a.dir === 'DOWN')  startY -= cellSize * 0.1;
+        if (a.dir === 'UP')    startY += cellSize * 0.1;
+
+        ctx.moveTo(startX, startY);
+
         for (let i = 1; i < path.length; i++) {
             ctx.lineTo((path[i].x + 0.5) * cellSize, (path[i].y + 0.5) * cellSize);
         }
         ctx.stroke();
 
-        // 2. Gambar Titik Bulat di Buntut Panah
-        const tailCx = (tail.x + 0.5) * cellSize;
-        const tailCy = (tail.y + 0.5) * cellSize;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.beginPath();
-        ctx.arc(tailCx, tailCy, cellSize * 0.08, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 3. Gambar Segitiga Lancip di Ujung Depan (Petunjuk Arah Utama)
+        // 2. Gambar Kepala Panah Segitiga Lancip di Ujung Paling Depan
         const headCx = (head.x + 0.5) * cellSize;
         const headCy = (head.y + 0.5) * cellSize;
-        const arrowLen = cellSize * 0.45; // Panjang Sudut Lancip
-        const arrowWidth = cellSize * 0.35; // Lebar Alas Panah
+
+        const arrowLength = cellSize * 0.48; // Panjang Ujung Lancip
+        const arrowWidth = cellSize * 0.38;  // Lebar Kepala Panah
 
         ctx.save();
         ctx.translate(headCx, headCy);
 
-        // Rotasi Sesuai Arah Keluar
+        // Menentukan Rotasi Sesuai Arah Gerak
         let angle = 0;
         if (a.dir === 'RIGHT') angle = 0;
         if (a.dir === 'DOWN')  angle = Math.PI / 2;
@@ -285,22 +285,12 @@ function draw() {
 
         ctx.rotate(angle);
 
-        // Menggambar Kepala Panah Berujung 1 Sudut Sangat Lancip
+        // Menggambar Segitiga Lancip
         ctx.fillStyle = drawColor;
         ctx.beginPath();
-        
-        // Ujung Paling Depan (Lancip)
-        ctx.moveTo(arrowLen, 0); 
-        
-        // Sayap Kiri Belakang
-        ctx.lineTo(-arrowLen * 0.3, -arrowWidth); 
-        
-        // Cekungan Tengah Belakang
-        ctx.lineTo(-arrowLen * 0.1, 0); 
-        
-        // Sayap Kanan Belakang
-        ctx.lineTo(-arrowLen * 0.3, arrowWidth); 
-        
+        ctx.moveTo(arrowLength, 0); // Point Lancip Terdepan
+        ctx.lineTo(-arrowLength * 0.4, -arrowWidth); // Sayap Kiri
+        ctx.lineTo(-arrowLength * 0.4, arrowWidth);  // Sayap Kanan
         ctx.closePath();
         ctx.fill();
 
@@ -382,4 +372,4 @@ function checkAndMove(index) {
 }
 
 initLevel();
-            
+                    
