@@ -15,11 +15,11 @@ html, body {
 }
 
 /* Opsi Warna Latar (Background Options) */
-body.bg-dark  { background-color: #0d131d; --arrow-color: #38bdf8; --grid-color: rgba(255,255,255,0.05); }
-body.bg-navy  { background-color: #1e1b4b; --arrow-color: #a7f3d0; --grid-color: rgba(255,255,255,0.05); }
-body.bg-light { background-color: #f8fafc; --arrow-color: #0f172a; --grid-color: rgba(0,0,0,0.05); }
-body.bg-cream { background-color: #fef3c7; --arrow-color: #78350f; --grid-color: rgba(0,0,0,0.05); }
-body.bg-green { background-color: #ecfdf5; --arrow-color: #065f46; --grid-color: rgba(0,0,0,0.05); }
+body.bg-dark  { background-color: #0d131d; --arrow-color: #38bdf8; }
+body.bg-navy  { background-color: #1e1b4b; --arrow-color: #a7f3d0; }
+body.bg-light { background-color: #f8fafc; --arrow-color: #0f172a; }
+body.bg-cream { background-color: #fef3c7; --arrow-color: #78350f; }
+body.bg-green { background-color: #ecfdf5; --arrow-color: #065f46; }
 
 body {
     display: flex;
@@ -92,25 +92,25 @@ canvas {
     border-radius: 12px;
 }
 
-/* Footer Control Bar Bawah */
+/* Footer Control Bar Bawah (Ringkas Tanpa Zoom) */
 .footer-bar {
     width: 100%;
+    max-width: 320px;
     background-color: #ffffff;
     border-radius: 35px;
-    padding: 8px 14px;
+    padding: 8px 24px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    justify-content: space-around;
     box-shadow: 0 4px 20px rgba(0,0,0,0.18);
 }
 
 .footer-btn {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     border: none;
-    font-size: 20px;
+    font-size: 22px;
     cursor: pointer;
     display: flex;
     justify-content: center;
@@ -124,45 +124,7 @@ canvas {
 .footer-btn:active { transform: scale(0.92); }
 .btn-palette { background-color: #8b5cf6; }
 .btn-settings { background-color: #10b981; }
-.btn-add-heart { background-color: #ef4444; font-size: 18px; }
-
-.zoom-slider-container {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.zoom-btn {
-    border: none;
-    background: #ffedd5;
-    color: #ea580c;
-    font-weight: bold;
-    font-size: 16px;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    cursor: pointer;
-}
-
-.zoom-track {
-    flex: 1;
-    height: 10px;
-    background-color: #a7f3d0;
-    border-radius: 5px;
-    position: relative;
-}
-
-.zoom-thumb {
-    width: 18px;
-    height: 18px;
-    background-color: #ffffff;
-    border-radius: 50%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.25);
-    position: absolute;
-    top: -4px;
-    left: 30%;
-}
+.btn-add-heart { background-color: #ef4444; font-size: 20px; }
 
 /* Modal Overlay & Cards */
 .modal-overlay {
@@ -292,3 +254,4 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 .modal-subtext { font-size: 13px; color: #64748b; margin-bottom: 12px; }
 .modal-header-centered h3 { font-size: 22px; color: #0f172a; font-weight: 800; }
+    
