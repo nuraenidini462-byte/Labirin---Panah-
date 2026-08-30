@@ -6,12 +6,17 @@
     <title>Arrow Maze Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="theme-light">
+<body class="bg-dark">
     <div class="game-container">
         <div class="header">
-            <div class="level-pill">
-                ★ Level <span id="level-num">187</span>
+            <div class="header-badge level-badge">
+                <span class="star-icon">★</span> Level <span id="level-num">187</span>
             </div>
+            
+            <div class="header-badge coin-badge">
+                <span class="coin-icon">🪙</span> <span id="coin-count">460</span>
+            </div>
+
             <div class="lives-pill" id="lives-display">
                 <span class="heart active">❤️</span>
                 <span class="heart active">❤️</span>
@@ -24,7 +29,7 @@
         </div>
 
         <div class="footer-bar">
-            <button class="footer-btn btn-palette" id="openThemeBtn" title="Tema Warna">🎨</button>
+            <button class="footer-btn btn-palette" id="openBgBtn" title="Ganti Latar">🎨</button>
             
             <button class="footer-btn btn-settings" id="openSettingsBtn" title="Pengaturan">⚙️</button>
             
@@ -36,51 +41,32 @@
                 <button class="zoom-btn" id="zoomInBtn">+</button>
             </div>
 
-            <button class="footer-btn btn-add-heart" id="buyLifeBtn" title="Tambah Nyawa">
+            <button class="footer-btn btn-add-heart" id="buyLifeBtn" title="Beli Nyawa">
                 ❤️<sup>+</sup>
             </button>
         </div>
     </div>
 
-    <div class="modal-overlay hidden" id="themeModal">
-        <div class="modal-card theme-card">
+    <div class="modal-overlay hidden" id="bgModal">
+        <div class="modal-card">
             <div class="modal-header">
-                <h3>Tema</h3>
-                <button class="close-btn" id="closeThemeBtn">✕</button>
+                <h3>Pilih Warna Latar</h3>
+                <button class="close-btn" id="closeBgBtn">✕</button>
             </div>
-            <div class="theme-grid">
-                <div class="theme-option active" data-theme="theme-light">
-                    <div class="theme-preview preview-light"><span>➔</span><span>➔</span></div>
-                    <p>Klasik Putih</p>
-                </div>
-                <div class="theme-option" data-theme="theme-green">
-                    <div class="theme-preview preview-green"><span>➔</span><span>➔</span></div>
-                    <p>Hijau Alami</p>
-                </div>
-                <div class="theme-option" data-theme="theme-pastel">
-                    <div class="theme-preview preview-pastel"><span>➔</span><span>➔</span></div>
-                    <p>Pastel Soft</p>
-                </div>
-                <div class="theme-option" data-theme="theme-wood">
-                    <div class="theme-preview preview-wood"><span>➔</span><span>➔</span></div>
-                    <p>Kayu Elegan</p>
-                </div>
-                <div class="theme-option" data-theme="theme-dark">
-                    <div class="theme-preview preview-dark"><span>➔</span><span>➔</span></div>
-                    <p>Neon Malam</p>
-                </div>
-                <div class="theme-option" data-theme="theme-black">
-                    <div class="theme-preview preview-black"><span>➔</span><span>➔</span></div>
-                    <p>Hitam Emas</p>
-                </div>
+            <div class="bg-options-grid">
+                <button class="bg-opt-btn bg-dark-opt active" data-bg="bg-dark">Malam Gelap</button>
+                <button class="bg-opt-btn bg-navy-opt" data-bg="bg-navy">Biru Navy</button>
+                <button class="bg-opt-btn bg-light-opt" data-bg="bg-light">Putih Terang</button>
+                <button class="bg-opt-btn bg-cream-opt" data-bg="bg-cream">Krem Soft</button>
+                <button class="bg-opt-btn bg-green-opt" data-bg="bg-green">Hijau Mint</button>
             </div>
         </div>
     </div>
 
     <div class="modal-overlay hidden" id="settingsModal">
-        <div class="modal-card settings-card">
+        <div class="modal-card">
             <div class="modal-header">
-                <h3>Pengaturan</h3>
+                <h3>Pengaturan Suara</h3>
                 <button class="close-btn" id="closeSettingsBtn">✕</button>
             </div>
             <div class="setting-item">
@@ -104,34 +90,23 @@
                     <span class="slider round"></span>
                 </label>
             </div>
-            <button class="modal-btn btn-secondary" id="restartLevelBtn">Coba lagi</button>
+            <button class="modal-btn btn-secondary" id="restartLevelBtn">Coba Lagi Level Ini</button>
         </div>
     </div>
 
     <div class="modal-overlay hidden" id="gameOverModal">
-        <div class="modal-card gameover-card">
+        <div class="modal-card">
             <button class="close-btn" id="closeGameOverBtn">✕</button>
             <div class="modal-header-centered">
-                <h3>Nyawa Habis</h3>
+                <h3>Nyawa Habis!</h3>
             </div>
             <div class="heart-hero">
                 ❤️
                 <span class="badge-plus">+3</span>
             </div>
-            <p class="modal-subtext">Revive dan dapatkan 3 nyawa tambahan</p>
-            <button class="modal-btn btn-primary" id="reviveBtn">▶ Bangkit</button>
-            <button class="btn-text-only" id="giveUpBtn">Coba lagi</button>
-        </div>
-    </div>
-
-    <div class="modal-overlay hidden" id="confirmModal">
-        <div class="modal-card confirm-card">
-            <div class="modal-header-centered">
-                <h3>Coba lagi</h3>
-            </div>
-            <p class="modal-desc">Mencoba lagi akan menghapus progres level ini. Anda yakin?</p>
-            <button class="modal-btn btn-primary" id="confirmRestartBtn">Bangkit</button>
-            <button class="btn-text-only" id="cancelRestartBtn">Coba lagi</button>
+            <p class="modal-subtext">Beli 3 Nyawa Seharga <b>50 Koin</b> untuk Melanjutkan</p>
+            <button class="modal-btn btn-primary" id="buyReviveBtn">🪙 Beli Nyawa (50 Koin)</button>
+            <button class="btn-text-only" id="giveUpBtn">Ulangi Level</button>
         </div>
     </div>
 
