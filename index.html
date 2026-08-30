@@ -3,51 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Arrow Maze Master</title>
+    <title>Arrow Maze Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="theme-blue">
+<body class="theme-light">
     <div class="game-container">
-        <!-- Header Atas: Level, Koin, & Nyawa -->
         <div class="header">
             <div class="level-pill">
-                <span class="star-icon">★</span> Level <span id="level-num">1</span>
-            </div>
-            <div class="coin-pill">
-                🪙 <span id="coin-count">100</span>
+                ★ Level <span id="level-num">187</span>
             </div>
             <div class="lives-pill" id="lives-display">
-                ❤️ ❤️ ❤️
+                <span class="heart active">❤️</span>
+                <span class="heart active">❤️</span>
+                <span class="heart active">❤️</span>
             </div>
         </div>
 
-        <!-- Area Canvas Main -->
         <div class="canvas-wrapper">
             <canvas id="gameCanvas"></canvas>
         </div>
 
-        <!-- Footer Control Bar -->
         <div class="footer-bar">
-            <!-- 1. Palet Ujung Kiri: Ganti Warna Latar -->
-            <button class="footer-btn btn-palette" id="themeBtn" title="Ganti Warna Latar">🎨</button>
+            <button class="footer-btn btn-palette" id="openThemeBtn" title="Tema Warna">🎨</button>
             
-            <!-- 2. Setting Sound/Audio -->
-            <button class="footer-btn btn-settings" id="audioBtn" title="Pengaturan Suara">🔊</button>
+            <button class="footer-btn btn-settings" id="openSettingsBtn" title="Pengaturan">⚙️</button>
             
-            <!-- 3. Zoom Slider / Indicator -->
             <div class="zoom-slider-container">
-                <span class="zoom-icon">—</span>
+                <button class="zoom-btn" id="zoomOutBtn">—</button>
                 <div class="zoom-track">
-                    <div class="zoom-thumb"></div>
+                    <div class="zoom-thumb" id="zoomThumb"></div>
                 </div>
-                <span class="zoom-icon">+</span>
+                <button class="zoom-btn" id="zoomInBtn">+</button>
             </div>
-            
-            <!-- 4. Tombol Pembelian Nyawa -->
-            <button class="footer-btn btn-buy-life" id="buyLifeBtn" title="Beli Nyawa (50 Koin)">
-                <span class="btn-heart-icon">❤️</span>
-                <span class="btn-cost-text">+1</span>
+
+            <button class="footer-btn btn-add-heart" id="buyLifeBtn" title="Tambah Nyawa">
+                ❤️<sup>+</sup>
             </button>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="themeModal">
+        <div class="modal-card theme-card">
+            <div class="modal-header">
+                <h3>Tema</h3>
+                <button class="close-btn" id="closeThemeBtn">✕</button>
+            </div>
+            <div class="theme-grid">
+                <div class="theme-option active" data-theme="theme-light">
+                    <div class="theme-preview preview-light"><span>➔</span><span>➔</span></div>
+                    <p>Klasik Putih</p>
+                </div>
+                <div class="theme-option" data-theme="theme-green">
+                    <div class="theme-preview preview-green"><span>➔</span><span>➔</span></div>
+                    <p>Hijau Alami</p>
+                </div>
+                <div class="theme-option" data-theme="theme-pastel">
+                    <div class="theme-preview preview-pastel"><span>➔</span><span>➔</span></div>
+                    <p>Pastel Soft</p>
+                </div>
+                <div class="theme-option" data-theme="theme-wood">
+                    <div class="theme-preview preview-wood"><span>➔</span><span>➔</span></div>
+                    <p>Kayu Elegan</p>
+                </div>
+                <div class="theme-option" data-theme="theme-dark">
+                    <div class="theme-preview preview-dark"><span>➔</span><span>➔</span></div>
+                    <p>Neon Malam</p>
+                </div>
+                <div class="theme-option" data-theme="theme-black">
+                    <div class="theme-preview preview-black"><span>➔</span><span>➔</span></div>
+                    <p>Hitam Emas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="settingsModal">
+        <div class="modal-card settings-card">
+            <div class="modal-header">
+                <h3>Pengaturan</h3>
+                <button class="close-btn" id="closeSettingsBtn">✕</button>
+            </div>
+            <div class="setting-item">
+                <span>🎵 Musik Latar</span>
+                <label class="switch">
+                    <input type="checkbox" id="musicToggle" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <span>🔔 Efek Suara (SFX)</span>
+                <label class="switch">
+                    <input type="checkbox" id="sfxToggle" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <span>📳 Getaran</span>
+                <label class="switch">
+                    <input type="checkbox" id="vibrateToggle" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <button class="modal-btn btn-secondary" id="restartLevelBtn">Coba lagi</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="gameOverModal">
+        <div class="modal-card gameover-card">
+            <button class="close-btn" id="closeGameOverBtn">✕</button>
+            <div class="modal-header-centered">
+                <h3>Nyawa Habis</h3>
+            </div>
+            <div class="heart-hero">
+                ❤️
+                <span class="badge-plus">+3</span>
+            </div>
+            <p class="modal-subtext">Revive dan dapatkan 3 nyawa tambahan</p>
+            <button class="modal-btn btn-primary" id="reviveBtn">▶ Bangkit</button>
+            <button class="btn-text-only" id="giveUpBtn">Coba lagi</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="confirmModal">
+        <div class="modal-card confirm-card">
+            <div class="modal-header-centered">
+                <h3>Coba lagi</h3>
+            </div>
+            <p class="modal-desc">Mencoba lagi akan menghapus progres level ini. Anda yakin?</p>
+            <button class="modal-btn btn-primary" id="confirmRestartBtn">Bangkit</button>
+            <button class="btn-text-only" id="cancelRestartBtn">Coba lagi</button>
         </div>
     </div>
 
