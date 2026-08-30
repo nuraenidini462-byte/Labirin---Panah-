@@ -229,7 +229,7 @@ function updateUI() {
     });
 }
 
-// FUNGSI DESAIN PANAH LENGKAP & RAPI SESUAI GAMBAR REFERENSI
+// FUNGSI DESAIN PANAH TERHUBUNG PRESISI DENGAN UJUNG SEGITIGA
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -240,17 +240,16 @@ function draw() {
 
         const drawColor = a.hitHighlight ? '#ef4444' : currentArrowColor;
 
-        // 1. Gambar Badan Line (Garis Jalur Tebal dengan Ujung Bulat/Lurus Mulus)
+        const headCx = (head.x + 0.5) * cellSize;
+        const headCy = (head.y + 0.5) * cellSize;
+
+        // 1. Gambar Garis Badan
         ctx.strokeStyle = drawColor;
-        ctx.lineWidth = cellSize * 0.28;
+        ctx.lineWidth = cellSize * 0.22;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
         ctx.beginPath();
-        
-        // Titik awal garis berada tepat di tengah kepala panah
-        const headCx = (head.x + 0.5) * cellSize;
-        const headCy = (head.y + 0.5) * cellSize;
         ctx.moveTo(headCx, headCy);
 
         for (let i = 1; i < path.length; i++) {
@@ -258,14 +257,12 @@ function draw() {
         }
         ctx.stroke();
 
-        // 2. Gambar Kepala Panah Segitiga Sempurna di Ujung Depan
-        const arrowLength = cellSize * 0.40; // Ukuran panjang segitiga depan
-        const arrowWidth = cellSize * 0.35;  // Ukuran lebar alas segitiga
+        // 2. Gambar Kepala Panah Segitiga Presisi Menutup Ujung Garis
+        const headSize = cellSize * 0.35; // Ukuran proporsional segitiga
 
         ctx.save();
         ctx.translate(headCx, headCy);
 
-        // Menentukan Rotasi Arah Segitiga
         let angle = 0;
         if (a.dir === 'RIGHT') angle = 0;
         if (a.dir === 'DOWN')  angle = Math.PI / 2;
@@ -274,12 +271,12 @@ function draw() {
 
         ctx.rotate(angle);
 
-        // Gambar Kepala Panah Segitiga Rapi (Ujung Lancip Terdepan)
+        // Segitiga teratur yang tersambung pas dari pusat titik koordinat
         ctx.fillStyle = drawColor;
         ctx.beginPath();
-        ctx.moveTo(arrowLength, 0);                 // Ujung Lancip Depan
-        ctx.lineTo(-arrowLength * 0.2, -arrowWidth); // Sayap Kiri Belakang
-        ctx.lineTo(-arrowLength * 0.2, arrowWidth);  // Sayap Kanan Belakang (Alas Lurus)
+        ctx.moveTo(headSize, 0);              // Ujung Lancip Menunjuk Arah
+        ctx.lineTo(-headSize * 0.6, -headSize); // Sudut Belakang Atas
+        ctx.lineTo(-headSize * 0.6, headSize);  // Sudut Belakang Bawah
         ctx.closePath();
         ctx.fill();
 
@@ -300,5 +297,65 @@ canvas.addEventListener('pointerdown', (e) => {
         a.path.some(pt => pt.x === gx && pt.y === gy)
     );
 
-    if (clicked
-                
+    if (clickedIdx !== -1) {
+        checkAndMove(clickedIdx);
+    }
+});
+
+function checkAndMove(index) {
+    const a = arrows[index];
+    const head = a.path[0];
+    let blocked = false;
+    let blockingArrow = null;
+
+    arrows.forEach((other, oIdx) => {
+        if (oIdx !== index) {
+            other.path.forEach(pt => {
+                if (a.dir === 'RIGHT' && pt.y === head.y && pt.x > head.x) { blocked = true; blockingArrow = a; }
+                if (a.dir === 'LEFT'  && pt.y === head.y && pt.x < head.x) { blocked = true; blockingArrow = a; }
+                if (a.dir === 'DOWN'  && pt.x === head.x && pt.y > head.y) { blocked = true; blockingArrow = a; }
+                if (a.dir === 'UP'    && pt.x === head.x && pt.y < head.y) { blocked = true; blockingArrow = a; }
+            });
+        }
+    });
+
+    if (blocked) {
+        playSound('hit');
+        triggerVibrate();
+
+        if (blockingArrow) {
+            blockingArrow.hitHighlight = true;
+            draw();
+            setTimeout(() => {
+                blockingArrow.hitHighlight = false;
+                draw();
+            }, 300);
+        }
+
+        lives -= 1;
+        updateUI();
+
+        if (lives <= 0) {
+            setTimeout(() => {
+                gameOverModal.classList.remove('hidden');
+            }, 350);
+        }
+    } else {
+        playSound('move');
+        arrows.splice(index, 1);
+        draw();
+
+        if (arrows.length === 0) {
+            setTimeout(() => {
+                playSound('win');
+                coins += 20;
+                currentLevel++;
+                lives = 3;
+                initLevel();
+            }, 200);
+        }
+    }
+}
+
+initLevel();
+        
