@@ -2,50 +2,49 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 const levelNumEl = document.getElementById('level-num');
-const coinCountEl = document.getElementById('coin-count');
 const livesDisplayEl = document.getElementById('lives-display');
-const themeBtn = document.getElementById('themeBtn');
-const audioBtn = document.getElementById('audioBtn');
-const buyLifeBtn = document.getElementById('buyLifeBtn');
 
-let currentLevel = 1;
-let coins = 100;
-let lives = 3;
-let soundEnabled = true;
+// Modals UI
+const themeModal = document.getElementById('themeModal');
+const settingsModal = document.getElementById('settingsModal');
+const gameOverModal = document.getElementById('gameOverModal');
+const confirmModal = document.getElementById('confirmModal');
 
-// Grid Panah
-let cols = 12;
-let rows = 16;
-let cellSize = 25;
-let arrows = [];
+// Open/Close Buttons
+document.getElementById('openThemeBtn').addEventListener('click', () => themeModal.classList.remove('hidden'));
+document.getElementById('closeThemeBtn').addEventListener('click', () => themeModal.classList.add('hidden'));
 
-// Fitur 1: Palet Lukis Ganti Warna Latar Belakang
-const themes = ['theme-blue', 'theme-dark', 'theme-purple', 'theme-green'];
-const arrowColors = ['#38bdf8', '#60a5fa', '#c084fc', '#34d399'];
-let currentThemeIdx = 0;
-let arrowColor = arrowColors[0];
+document.getElementById('openSettingsBtn').addEventListener('click', () => settingsModal.classList.remove('hidden'));
+document.getElementById('closeSettingsBtn').addEventListener('click', () => settingsModal.classList.add('hidden'));
 
-themeBtn.addEventListener('click', () => {
-    document.body.classList.remove(themes[currentThemeIdx]);
-    currentThemeIdx = (currentThemeIdx + 1) % themes.length;
-    document.body.classList.add(themes[currentThemeIdx]);
-    arrowColor = arrowColors[currentThemeIdx];
-    playSound('move');
-    draw();
+document.getElementById('buyLifeBtn').addEventListener('click', () => {
+    if (lives < 3) {
+        lives = 3;
+        updateUI();
+        playSound('win');
+    } else {
+        alert("Nyawa Anda masih penuh!");
+    }
 });
 
-// Fitur 2: Audio & Setting Sound
+// Settings & Audio System
+let currentLevel = 187;
+let lives = 3;
+let isSfxOn = true;
+let isMusicOn = true;
+let isVibrateOn = true;
+
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playTone(freq, duration, type = 'sine') {
-    if (!soundEnabled) return;
+    if (!isSfxOn) return;
     try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = type;
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
@@ -55,42 +54,83 @@ function playTone(freq, duration, type = 'sine') {
 }
 
 function playSound(type) {
-    if (type === 'move') playTone(600, 0.12, 'triangle');
-    if (type === 'hit')  playTone(150, 0.2, 'sawtooth');
-    if (type === 'win')  playTone(800, 0.3, 'sine');
-    if (type === 'buy')  playTone(1000, 0.2, 'sine');
+    if (type === 'move') playTone(550, 0.1, 'triangle');
+    if (type === 'hit')  playTone(130, 0.25, 'sawtooth');
+    if (type === 'win')  playTone(850, 0.3, 'sine');
 }
 
-audioBtn.addEventListener('click', () => {
-    soundEnabled = !soundEnabled;
-    audioBtn.textContent = soundEnabled ? '🔊' : '🔇';
-    audioBtn.style.opacity = soundEnabled ? '1' : '0.5';
+function triggerVibrate() {
+    if (isVibrateOn && navigator.vibrate) {
+        navigator.vibrate(80);
+    }
+}
+
+document.getElementById('sfxToggle').addEventListener('change', (e) => isSfxOn = e.target.checked);
+document.getElementById('musicToggle').addEventListener('change', (e) => isMusicOn = e.target.checked);
+document.getElementById('vibrateToggle').addEventListener('change', (e) => isVibrateOn = e.target.checked);
+
+// Modal Nyawa Habis (Revive / Bangkit / Coba lagi)
+document.getElementById('reviveBtn').addEventListener('click', () => {
+    lives = 3;
+    updateUI();
+    gameOverModal.classList.add('hidden');
+    playSound('win');
 });
 
-// Fitur 3: Pembelian Nyawa (+1 Nyawa seharga 50 Koin)
-buyLifeBtn.addEventListener('click', () => {
-    if (lives >= 3) {
-        alert("Nyawa Anda masih penuh (maksimal 3)!");
-        return;
-    }
-    if (coins < 50) {
-        alert("Koin tidak cukup! Butuh 50 🪙 untuk membeli nyawa.");
-        return;
-    }
-    
-    coins -= 50;
-    lives += 1;
-    playSound('buy');
-    updateUI();
+document.getElementById('giveUpBtn').addEventListener('click', () => {
+    gameOverModal.classList.add('hidden');
+    confirmModal.classList.remove('hidden');
 });
+
+document.getElementById('closeGameOverBtn').addEventListener('click', () => {
+    gameOverModal.classList.add('hidden');
+});
+
+// Modal Konfirmasi Coba Lagi (Persis Video)
+document.getElementById('confirmRestartBtn').addEventListener('click', () => {
+    confirmModal.classList.add('hidden');
+    lives = 3;
+    initLevel();
+});
+
+document.getElementById('cancelRestartBtn').addEventListener('click', () => {
+    confirmModal.classList.add('hidden');
+});
+
+document.getElementById('restartLevelBtn').addEventListener('click', () => {
+    settingsModal.classList.add('hidden');
+    confirmModal.classList.remove('hidden');
+});
+
+// Dynamic Theme Picker
+let currentArrowColor = '#1e293b';
+document.querySelectorAll('.theme-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+        document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        
+        const selectedTheme = opt.getAttribute('data-theme');
+        document.body.className = selectedTheme;
+
+        // Ambil warna panah sesuai tema
+        const style = getComputedStyle(document.body);
+        currentArrowColor = style.getPropertyValue('--arrow-color').trim();
+
+        draw();
+        themeModal.classList.add('hidden');
+    });
+});
+
+// Grid Padat Labirin Panah (Persis Video)
+let cols = 14;
+let rows = 18;
+let cellSize = 22;
+let arrows = [];
 
 function resizeCanvas() {
     const wrapper = document.querySelector('.canvas-wrapper');
-    const availWidth = wrapper.clientWidth;
-    const availHeight = wrapper.clientHeight;
-
-    const cellW = availWidth / cols;
-    const cellH = availHeight / rows;
+    const cellW = wrapper.clientWidth / cols;
+    const cellH = wrapper.clientHeight / rows;
     cellSize = Math.min(cellW, cellH);
 
     canvas.width = cols * cellSize;
@@ -100,27 +140,17 @@ function resizeCanvas() {
 
 window.addEventListener('resize', resizeCanvas);
 
-// Generator Ular Panah
 function initLevel() {
     arrows = [];
-    
-    if (currentLevel <= 2) {
-        cols = 10; rows = 14;
-    } else if (currentLevel <= 5) {
-        cols = 12; rows = 16;
-    } else {
-        cols = 14; rows = 18;
-    }
-
     let occupied = Array(rows).fill(null).map(() => Array(cols).fill(false));
     const dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
 
-    for (let attempt = 0; attempt < 1200; attempt++) {
+    // Generator Labirin Ular Panah Padat
+    for (let attempt = 0; attempt < 1500; attempt++) {
         let hx = Math.floor(Math.random() * cols);
         let hy = Math.floor(Math.random() * rows);
 
         if (occupied[hy][hx]) continue;
-
         let dir = dirs[Math.floor(Math.random() * dirs.length)];
 
         let pathClearOut = true;
@@ -145,46 +175,38 @@ function initLevel() {
         let tempOccupied = JSON.parse(JSON.stringify(occupied));
         tempOccupied[hy][hx] = true;
 
-        let currX = hx;
-        let currY = hy;
+        let currX = hx, currY = hy;
         let success = true;
 
         for (let l = 1; l < targetLen; l++) {
+            let ds = (l === 1) 
+                ? [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}].filter(d => {
+                    if (dir === 'LEFT' && d.x === 1) return false;
+                    if (dir === 'RIGHT' && d.x === -1) return false;
+                    if (dir === 'UP' && d.y === 1) return false;
+                    if (dir === 'DOWN' && d.y === -1) return false;
+                    return true;
+                })
+                : [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+
             let neighbors = [];
-            let ds = [];
-
-            if (l === 1) {
-                if (dir !== 'LEFT') ds.push({x: 1, y: 0});
-                if (dir !== 'RIGHT') ds.push({x: -1, y: 0});
-                if (dir !== 'UP') ds.push({x: 0, y: 1});
-                if (dir !== 'DOWN') ds.push({x: 0, y: -1});
-            } else {
-                ds = [{x: 1, y: 0}, {x: -1, y: 0}, {x: 0, y: 1}, {x: 0, y: -1}];
-            }
-
             for (let d of ds) {
-                let nx = currX + d.x;
-                let ny = currY + d.y;
+                let nx = currX + d.x, ny = currY + d.y;
                 if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && !tempOccupied[ny][nx]) {
                     neighbors.push({x: nx, y: ny});
                 }
             }
 
-            if (neighbors.length === 0) {
-                if (l < 2) success = false;
-                break;
-            }
-
+            if (neighbors.length === 0) break;
             let nextPt = neighbors[Math.floor(Math.random() * neighbors.length)];
             path.push(nextPt);
             tempOccupied[nextPt.y][nextPt.x] = true;
-            currX = nextPt.x;
-            currY = nextPt.y;
+            currX = nextPt.x; currY = nextPt.y;
         }
 
         if (success && path.length >= 2) {
             path.forEach(pt => occupied[pt.y][pt.x] = true);
-            arrows.push({ dir: dir, path: path });
+            arrows.push({ dir: dir, path: path, hitHighlight: false });
         }
     }
 
@@ -194,19 +216,14 @@ function initLevel() {
 
 function updateUI() {
     levelNumEl.textContent = currentLevel;
-    coinCountEl.textContent = coins;
-    
-    let heartsHTML = '';
-    for (let i = 0; i < 3; i++) {
-        heartsHTML += i < lives ? '❤️' : '🖤';
-    }
-    livesDisplayEl.innerHTML = heartsHTML;
-    
-    // Nonaktifkan tombol beli jika koin kurang atau nyawa penuh
-    buyLifeBtn.style.opacity = (lives >= 3 || coins < 50) ? '0.5' : '1';
+    const hearts = livesDisplayEl.querySelectorAll('.heart');
+    hearts.forEach((h, idx) => {
+        if (idx < lives) h.classList.add('active');
+        else h.classList.remove('active');
+    });
 }
 
-// Render Panah & Titik Buntut
+// Render Panah, Buntut Titik, & Efek Merah Saat Tabrakan (Persis Video)
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -215,9 +232,12 @@ function draw() {
         const head = path[0];
         const tail = path[path.length - 1];
 
-        // Badan Panah
-        ctx.strokeStyle = arrowColor;
-        ctx.lineWidth = cellSize * 0.32;
+        // Warna Panah (Sesuai Tema atau Merah Jika Menabrak)
+        const drawColor = a.hitHighlight ? '#ef4444' : currentArrowColor;
+
+        // 1. Garis Badan Ular Panah
+        ctx.strokeStyle = drawColor;
+        ctx.lineWidth = cellSize * 0.34;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
@@ -228,15 +248,15 @@ function draw() {
         }
         ctx.stroke();
 
-        // Titik Ekor/Buntut
+        // 2. Titik Buntut/Ekor
         const tailCx = (tail.x + 0.5) * cellSize;
         const tailCy = (tail.y + 0.5) * cellSize;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
         ctx.beginPath();
-        ctx.arc(tailCx, tailCy, cellSize * 0.1, 0, Math.PI * 2);
+        ctx.arc(tailCx, tailCy, cellSize * 0.09, 0, Math.PI * 2);
         ctx.fill();
 
-        // Kepala Panah
+        // 3. Ujung Kepala Panah Menyatu Lancip (Persis Video)
         const headCx = (head.x + 0.5) * cellSize;
         const headCy = (head.y + 0.5) * cellSize;
         const arrowSize = cellSize * 0.42;
@@ -252,7 +272,7 @@ function draw() {
 
         ctx.rotate(angle);
 
-        ctx.fillStyle = arrowColor;
+        ctx.fillStyle = drawColor;
         ctx.beginPath();
         ctx.moveTo(arrowSize * 0.8, 0);
         ctx.lineTo(-arrowSize * 0.4, -arrowSize * 0.55);
@@ -265,7 +285,7 @@ function draw() {
     });
 }
 
-// Interaksi Tap Panah
+// Interaksi Tap
 canvas.addEventListener('pointerdown', (e) => {
     const rect = canvas.getBoundingClientRect();
     const touchX = e.clientX - rect.left;
@@ -287,46 +307,51 @@ function checkAndMove(index) {
     const a = arrows[index];
     const head = a.path[0];
     let blocked = false;
+    let blockingArrow = null;
 
-    // Cek Tabrakan
+    // Cek Jalur Keluar
     arrows.forEach((other, oIdx) => {
         if (oIdx !== index) {
             other.path.forEach(pt => {
-                if (a.dir === 'RIGHT' && pt.y === head.y && pt.x > head.x) blocked = true;
-                if (a.dir === 'LEFT'  && pt.y === head.y && pt.x < head.x) blocked = true;
-                if (a.dir === 'DOWN'  && pt.x === head.x && pt.y > head.y) blocked = true;
-                if (a.dir === 'UP'    && pt.x === head.x && pt.y < head.y) blocked = true;
+                if (a.dir === 'RIGHT' && pt.y === head.y && pt.x > head.x) { blocked = true; blockingArrow = a; }
+                if (a.dir === 'LEFT'  && pt.y === head.y && pt.x < head.x) { blocked = true; blockingArrow = a; }
+                if (a.dir === 'DOWN'  && pt.x === head.x && pt.y > head.y) { blocked = true; blockingArrow = a; }
+                if (a.dir === 'UP'    && pt.x === head.x && pt.y < head.y) { blocked = true; blockingArrow = a; }
             });
         }
     });
 
     if (blocked) {
         playSound('hit');
+        triggerVibrate();
+
+        // Highlight Merah Pada Panah Yang Menabrak (Persis Video)
+        if (blockingArrow) {
+            blockingArrow.hitHighlight = true;
+            draw();
+            setTimeout(() => {
+                blockingArrow.hitHighlight = false;
+                draw();
+            }, 300);
+        }
+
         lives -= 1;
         updateUI();
 
-        canvas.style.transform = 'translate(6px, 0)';
-        setTimeout(() => canvas.style.transform = 'translate(-6px, 0)', 50);
-        setTimeout(() => canvas.style.transform = 'translate(0, 0)', 100);
-
         if (lives <= 0) {
             setTimeout(() => {
-                alert("Game Over! Nyawa Habis. Anda bisa membeli nyawa dengan koin atau mengulang level.");
-                lives = 3;
-                initLevel();
-            }, 150);
+                gameOverModal.classList.remove('hidden');
+            }, 350);
         }
     } else {
         playSound('move');
         arrows.splice(index, 1);
-        coins += 15; // Mendapat 15 koin per panah yang sukses keluar
-        updateUI();
         draw();
 
         if (arrows.length === 0) {
             setTimeout(() => {
                 playSound('win');
-                alert(`Selamat! Level ${currentLevel} Selesai 🎉`);
+                alert(`Level ${currentLevel} Selesai! 🎉`);
                 currentLevel++;
                 lives = 3;
                 initLevel();
@@ -336,3 +361,4 @@ function checkAndMove(index) {
 }
 
 initLevel();
+            
