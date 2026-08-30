@@ -5,18 +5,10 @@ const levelNumEl = document.getElementById('level-num');
 const coinCountEl = document.getElementById('coin-count');
 const livesDisplayEl = document.getElementById('lives-display');
 
-// Modals UI
+// UI Modals & Start Screen
 const bgModal = document.getElementById('bgModal');
 const settingsModal = document.getElementById('settingsModal');
 const gameOverModal = document.getElementById('gameOverModal');
-
-document.getElementById('openBgBtn').addEventListener('click', () => bgModal.classList.remove('hidden'));
-document.getElementById('closeBgBtn').addEventListener('click', () => bgModal.classList.add('hidden'));
-
-document.getElementById('openSettingsBtn').addEventListener('click', () => settingsModal.classList.remove('hidden'));
-document.getElementById('closeSettingsBtn').addEventListener('click', () => settingsModal.classList.add('hidden'));
-
-document.getElementById('closeGameOverBtn').addEventListener('click', () => gameOverModal.classList.add('hidden'));
 
 // Game States
 let currentLevel = 1;
@@ -25,7 +17,7 @@ let lives = 3;
 let isSfxOn = true;
 let isMusicOn = true;
 let isVibrateOn = true;
-let isGameStarted = false;
+let isGameStarted = false; // Status apakah game sudah dimulai
 
 // Audio System
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -58,7 +50,7 @@ function playSound(type) {
     }
 }
 
-function startCatchyBGM() {
+function startBGM() {
     if (bgmTimer) clearInterval(bgmTimer);
     const melody = [
         {f: 329.63, d: 0.15}, {f: 329.63, d: 0.15}, {f: 0, d: 0.15}, {f: 329.63, d: 0.15},
@@ -81,6 +73,15 @@ function triggerVibrate() {
         navigator.vibrate(70);
     }
 }
+
+// Event Listeners Navigasi
+document.getElementById('openBgBtn').addEventListener('click', () => bgModal.classList.remove('hidden'));
+document.getElementById('closeBgBtn').addEventListener('click', () => bgModal.classList.add('hidden'));
+
+document.getElementById('openSettingsBtn').addEventListener('click', () => settingsModal.classList.remove('hidden'));
+document.getElementById('closeSettingsBtn').addEventListener('click', () => settingsModal.classList.add('hidden'));
+
+document.getElementById('closeGameOverBtn').addEventListener('click', () => gameOverModal.classList.add('hidden'));
 
 document.getElementById('sfxToggle').addEventListener('change', (e) => isSfxOn = e.target.checked);
 document.getElementById('musicToggle').addEventListener('change', (e) => isMusicOn = e.target.checked);
@@ -123,7 +124,7 @@ document.querySelectorAll('.bg-opt-btn').forEach(btn => {
         document.body.className = bgClass;
 
         const style = getComputedStyle(document.body);
-        currentArrowColor = style.getPropertyValue('--arrow-color').trim();
+        currentArrowColor = style.getPropertyValue('--arrow-color').trim() || '#38bdf8';
 
         draw();
         bgModal.classList.add('hidden');
@@ -137,6 +138,7 @@ let arrows = [];
 
 function resizeCanvas() {
     const wrapper = document.querySelector('.canvas-wrapper');
+    if (!wrapper) return;
     const cellW = wrapper.clientWidth / cols;
     const cellH = wrapper.clientHeight / rows;
     cellSize = Math.min(cellW, cellH);
@@ -180,113 +182,5 @@ function initLevel() {
 
         if (!pathClearOut) continue;
 
-        let targetLen = Math.floor(Math.random() * 4) + 3;
-        let path = [{x: hx, y: hy}];
-        let tempOccupied = JSON.parse(JSON.stringify(occupied));
-        tempOccupied[hy][hx] = true;
-
-        let currX = hx, currY = hy;
-
-        for (let l = 1; l < targetLen; l++) {
-            let ds = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
-            let neighbors = [];
-            for (let d of ds) {
-                let nx = currX + d.x, ny = currY + d.y;
-                if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && !tempOccupied[ny][nx]) {
-                    neighbors.push({x: nx, y: ny});
-                }
-            }
-
-            if (neighbors.length === 0) break;
-            let nextPt = neighbors[Math.floor(Math.random() * neighbors.length)];
-            path.push(nextPt);
-            tempOccupied[nextPt.y][nextPt.x] = true;
-            currX = nextPt.x; currY = nextPt.y;
-        }
-
-        if (path.length >= 2) {
-            path.forEach(pt => occupied[pt.y][pt.x] = true);
-            arrows.push({ dir: dir, path: path, hitHighlight: false });
-        }
-    }
-
-    resizeCanvas();
-    updateUI();
-}
-
-function updateUI() {
-    levelNumEl.textContent = currentLevel;
-    coinCountEl.textContent = coins;
-    const hearts = livesDisplayEl.querySelectorAll('.heart');
-    hearts.forEach((h, idx) => {
-        if (idx < lives) h.classList.add('active');
-        else h.classList.remove('active');
-    });
-}
-
-// DESAIN DRAWING DENGAN METODE STANDARD CANVAS (100% SUPPORTS ALL BROWSERS)
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 1. TAMPILKAN START SCREEN JIKA GAME BELUM DIMULAI
-    if (!isGameStarted) {
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const btnW = canvas.width * 0.65;
-        const btnH = 48;
-        const btnX = (canvas.width - btnW) / 2;
-        const btnY = (canvas.height - btnH) / 2;
-
-        ctx.fillStyle = '#22c55e';
-        ctx.fillRect(btnX, btnY, btnW, btnH);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('Mulai Game', canvas.width / 2, canvas.height / 2);
-        return;
-    }
-
-    // 2. MENGGAMBAR PANAH LENGKAP
-    arrows.forEach(a => {
-        const path = a.path;
-        const head = path[0];
-
-        const drawColor = a.hitHighlight ? '#ef4444' : currentArrowColor;
-        const headCx = (head.x + 0.5) * cellSize;
-        const headCy = (head.y + 0.5) * cellSize;
-
-        // Gambar Garis Badan
-        ctx.strokeStyle = drawColor;
-        ctx.lineWidth = cellSize * 0.22;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        ctx.beginPath();
-        ctx.moveTo(headCx, headCy);
-
-        for (let i = 1; i < path.length; i++) {
-            ctx.lineTo((path[i].x + 0.5) * cellSize, (path[i].y + 0.5) * cellSize);
-        }
-        ctx.stroke();
-
-        // Gambar Segitiga Panah di Kepala (Head)
-        const headSize = cellSize * 0.35;
-
-        ctx.save();
-        ctx.translate(headCx, headCy);
-
-        let angle = 0;
-        if (a.dir === 'RIGHT') angle = 0;
-        if (a.dir === 'DOWN')  angle = Math.PI / 2;
-        if (a.dir === 'LEFT')  angle = Math.PI;
-        if (a.dir === 'UP')    angle = -Math.PI / 2;
-
-        ctx.rotate(angle);
-
-        ctx.fillStyle = drawColor;
-        ctx.beginPath();
-        ctx.moveTo(headSize, 0);               // Ujung lancip
-        ctx
+        let targetLen = Math.floor(Math.random() * 4) + 3
+         
