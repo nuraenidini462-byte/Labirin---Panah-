@@ -19,7 +19,7 @@ document.getElementById('closeSettingsBtn').addEventListener('click', () => sett
 
 document.getElementById('closeGameOverBtn').addEventListener('click', () => gameOverModal.classList.add('hidden'));
 
-// Game States: Level Mulai dari 1
+// Game States
 let currentLevel = 1;
 let coins = 100;
 let lives = 3;
@@ -27,7 +27,7 @@ let isSfxOn = true;
 let isMusicOn = true;
 let isVibrateOn = true;
 
-// Audio System (BGM 8-Bit Interaktif)
+// Audio System
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let bgmTimer = null;
 
@@ -58,7 +58,6 @@ function playSound(type) {
     }
 }
 
-// Lagu Latar
 function startCatchyBGM() {
     if (bgmTimer) clearInterval(bgmTimer);
     const melody = [
@@ -92,7 +91,6 @@ document.getElementById('sfxToggle').addEventListener('change', (e) => isSfxOn =
 document.getElementById('musicToggle').addEventListener('change', (e) => isMusicOn = e.target.checked);
 document.getElementById('vibrateToggle').addEventListener('change', (e) => isVibrateOn = e.target.checked);
 
-// Pembelian Nyawa Pakai Koin
 function buyLivesWithCoins() {
     if (coins >= 50) {
         coins -= 50;
@@ -120,7 +118,6 @@ document.getElementById('restartLevelBtn').addEventListener('click', () => {
     initLevel();
 });
 
-// Ganti Warna Latar via Palet
 let currentArrowColor = '#38bdf8';
 document.querySelectorAll('.bg-opt-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -232,43 +229,43 @@ function updateUI() {
     });
 }
 
- // Render Panah: Ujung Depan 1 Sudut Lancip Murni, Belakang Lurus Rata
+// FUNGSI DESAIN PANAH LENGKAP & RAPI SESUAI GAMBAR REFERENSI
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     arrows.forEach(a => {
         const path = a.path;
-        const head = path[0]; // Ujung Depan (Kepala Panah)
-        const tail = path[path.length - 1]; // Ujung Belakang
+        const head = path[0];
+        const tail = path[path.length - 1];
 
         const drawColor = a.hitHighlight ? '#ef4444' : currentArrowColor;
 
-        // 1. Gambar Garis/Badan Meliuk
+        // 1. Gambar Badan Line (Garis Jalur Tebal dengan Ujung Bulat/Lurus Mulus)
         ctx.strokeStyle = drawColor;
         ctx.lineWidth = cellSize * 0.28;
-        ctx.lineCap = 'butt'; // Ujung belakang potongan lurus rata
-        ctx.lineJoin = 'miter';
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
 
         ctx.beginPath();
-        // Memulai garis tepat dari tengah sel kepala panah
-        ctx.moveTo((head.x + 0.5) * cellSize, (head.y + 0.5) * cellSize);
+        
+        // Titik awal garis berada tepat di tengah kepala panah
+        const headCx = (head.x + 0.5) * cellSize;
+        const headCy = (head.y + 0.5) * cellSize;
+        ctx.moveTo(headCx, headCy);
 
         for (let i = 1; i < path.length; i++) {
             ctx.lineTo((path[i].x + 0.5) * cellSize, (path[i].y + 0.5) * cellSize);
         }
         ctx.stroke();
 
-        // 2. Gambar Segitiga Lancip Sempurna di Ujung Depan (1 Sudut Lancip Terdepan, Belakang Lurus)
-        const headCx = (head.x + 0.5) * cellSize;
-        const headCy = (head.y + 0.5) * cellSize;
-
-        const arrowLen = cellSize * 0.42;   // Jarak Ujung Lancip ke Depan
-        const arrowWidth = cellSize * 0.35; // Lebar Alas Segitiga
+        // 2. Gambar Kepala Panah Segitiga Sempurna di Ujung Depan
+        const arrowLength = cellSize * 0.40; // Ukuran panjang segitiga depan
+        const arrowWidth = cellSize * 0.35;  // Ukuran lebar alas segitiga
 
         ctx.save();
         ctx.translate(headCx, headCy);
 
-        // Rotasi Arah Segitiga
+        // Menentukan Rotasi Arah Segitiga
         let angle = 0;
         if (a.dir === 'RIGHT') angle = 0;
         if (a.dir === 'DOWN')  angle = Math.PI / 2;
@@ -277,12 +274,12 @@ function draw() {
 
         ctx.rotate(angle);
 
-        // Segitiga Murni: 1 Sudut Lancip di Depan, Garis Belakang Lurus Rata
+        // Gambar Kepala Panah Segitiga Rapi (Ujung Lancip Terdepan)
         ctx.fillStyle = drawColor;
         ctx.beginPath();
-        ctx.moveTo(arrowLen, 0);                 // 1. Titik Ujung Lancip Terdepan
-        ctx.lineTo(-arrowLen * 0.2, -arrowWidth); // 2. Sudut Kiri Belakang
-        ctx.lineTo(-arrowLen * 0.2, arrowWidth);  // 3. Sudut Kanan Belakang (Garis Belakang Lurus Rata)
+        ctx.moveTo(arrowLength, 0);                 // Ujung Lancip Depan
+        ctx.lineTo(-arrowLength * 0.2, -arrowWidth); // Sayap Kiri Belakang
+        ctx.lineTo(-arrowLength * 0.2, arrowWidth);  // Sayap Kanan Belakang (Alas Lurus)
         ctx.closePath();
         ctx.fill();
 
@@ -303,65 +300,5 @@ canvas.addEventListener('pointerdown', (e) => {
         a.path.some(pt => pt.x === gx && pt.y === gy)
     );
 
-    if (clickedIdx !== -1) {
-        checkAndMove(clickedIdx);
-    }
-});
-
-function checkAndMove(index) {
-    const a = arrows[index];
-    const head = a.path[0];
-    let blocked = false;
-    let blockingArrow = null;
-
-    arrows.forEach((other, oIdx) => {
-        if (oIdx !== index) {
-            other.path.forEach(pt => {
-                if (a.dir === 'RIGHT' && pt.y === head.y && pt.x > head.x) { blocked = true; blockingArrow = a; }
-                if (a.dir === 'LEFT'  && pt.y === head.y && pt.x < head.x) { blocked = true; blockingArrow = a; }
-                if (a.dir === 'DOWN'  && pt.x === head.x && pt.y > head.y) { blocked = true; blockingArrow = a; }
-                if (a.dir === 'UP'    && pt.x === head.x && pt.y < head.y) { blocked = true; blockingArrow = a; }
-            });
-        }
-    });
-
-    if (blocked) {
-        playSound('hit');
-        triggerVibrate();
-
-        if (blockingArrow) {
-            blockingArrow.hitHighlight = true;
-            draw();
-            setTimeout(() => {
-                blockingArrow.hitHighlight = false;
-                draw();
-            }, 300);
-        }
-
-        lives -= 1;
-        updateUI();
-
-        if (lives <= 0) {
-            setTimeout(() => {
-                gameOverModal.classList.remove('hidden');
-            }, 350);
-        }
-    } else {
-        playSound('move');
-        arrows.splice(index, 1);
-        draw();
-
-        if (arrows.length === 0) {
-            setTimeout(() => {
-                playSound('win');
-                coins += 20;
-                currentLevel++;
-                lives = 3;
-                initLevel();
-            }, 200);
-        }
-    }
-}
-
-initLevel();
-                    
+    if (clicked
+                
