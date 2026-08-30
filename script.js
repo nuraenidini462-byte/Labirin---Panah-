@@ -2,39 +2,34 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 const levelNumEl = document.getElementById('level-num');
+const coinCountEl = document.getElementById('coin-count');
 const livesDisplayEl = document.getElementById('lives-display');
 
 // Modals UI
-const themeModal = document.getElementById('themeModal');
+const bgModal = document.getElementById('bgModal');
 const settingsModal = document.getElementById('settingsModal');
 const gameOverModal = document.getElementById('gameOverModal');
-const confirmModal = document.getElementById('confirmModal');
 
 // Open/Close Buttons
-document.getElementById('openThemeBtn').addEventListener('click', () => themeModal.classList.remove('hidden'));
-document.getElementById('closeThemeBtn').addEventListener('click', () => themeModal.classList.add('hidden'));
+document.getElementById('openBgBtn').addEventListener('click', () => bgModal.classList.remove('hidden'));
+document.getElementById('closeBgBtn').addEventListener('click', () => bgModal.classList.add('hidden'));
 
 document.getElementById('openSettingsBtn').addEventListener('click', () => settingsModal.classList.remove('hidden'));
 document.getElementById('closeSettingsBtn').addEventListener('click', () => settingsModal.classList.add('hidden'));
 
-document.getElementById('buyLifeBtn').addEventListener('click', () => {
-    if (lives < 3) {
-        lives = 3;
-        updateUI();
-        playSound('win');
-    } else {
-        alert("Nyawa Anda masih penuh!");
-    }
-});
+document.getElementById('closeGameOverBtn').addEventListener('click', () => gameOverModal.classList.add('hidden'));
 
-// Settings & Audio System
+// Game States
 let currentLevel = 187;
+let coins = 460;
 let lives = 3;
 let isSfxOn = true;
 let isMusicOn = true;
 let isVibrateOn = true;
 
+// Web Audio Synth BGM & SFX
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let bgmInterval = null;
 
 function playTone(freq, duration, type = 'sine') {
     if (!isSfxOn) return;
@@ -54,10 +49,28 @@ function playTone(freq, duration, type = 'sine') {
 }
 
 function playSound(type) {
-    if (type === 'move') playTone(550, 0.1, 'triangle');
-    if (type === 'hit')  playTone(130, 0.25, 'sawtooth');
-    if (type === 'win')  playTone(850, 0.3, 'sine');
+    if (type === 'move') playTone(600, 0.08, 'triangle');
+    if (type === 'hit')  playTone(120, 0.25, 'sawtooth');
+    if (type === 'win')  playTone(880, 0.3, 'sine');
 }
+
+// Musik Melodi Latar
+function startBGM() {
+    if (bgmInterval) clearInterval(bgmInterval);
+    const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63];
+    let step = 0;
+    bgmInterval = setInterval(() => {
+        if (isMusicOn) {
+            playTone(notes[step % notes.length], 0.15, 'sine');
+            step++;
+        }
+    }, 400);
+}
+
+document.addEventListener('click', () => {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!bgmInterval) startBGM();
+}, { once: true });
 
 function triggerVibrate() {
     if (isVibrateOn && navigator.vibrate) {
@@ -69,59 +82,53 @@ document.getElementById('sfxToggle').addEventListener('change', (e) => isSfxOn =
 document.getElementById('musicToggle').addEventListener('change', (e) => isMusicOn = e.target.checked);
 document.getElementById('vibrateToggle').addEventListener('change', (e) => isVibrateOn = e.target.checked);
 
-// Modal Nyawa Habis (Revive / Bangkit / Coba lagi)
-document.getElementById('reviveBtn').addEventListener('click', () => {
-    lives = 3;
-    updateUI();
-    gameOverModal.classList.add('hidden');
-    playSound('win');
-});
+// Pembelian Nyawa Menggunakan Koin
+function buyLivesWithCoins() {
+    if (coins >= 50) {
+        coins -= 50;
+        lives = 3;
+        updateUI();
+        gameOverModal.classList.add('hidden');
+        playSound('win');
+    } else {
+        alert("Koin Anda tidak cukup!");
+    }
+}
+
+document.getElementById('buyLifeBtn').addEventListener('click', buyLivesWithCoins);
+document.getElementById('buyReviveBtn').addEventListener('click', buyLivesWithCoins);
 
 document.getElementById('giveUpBtn').addEventListener('click', () => {
     gameOverModal.classList.add('hidden');
-    confirmModal.classList.remove('hidden');
-});
-
-document.getElementById('closeGameOverBtn').addEventListener('click', () => {
-    gameOverModal.classList.add('hidden');
-});
-
-// Modal Konfirmasi Coba Lagi (Persis Video)
-document.getElementById('confirmRestartBtn').addEventListener('click', () => {
-    confirmModal.classList.add('hidden');
     lives = 3;
     initLevel();
 });
 
-document.getElementById('cancelRestartBtn').addEventListener('click', () => {
-    confirmModal.classList.add('hidden');
-});
-
 document.getElementById('restartLevelBtn').addEventListener('click', () => {
     settingsModal.classList.add('hidden');
-    confirmModal.classList.remove('hidden');
+    lives = 3;
+    initLevel();
 });
 
-// Dynamic Theme Picker
-let currentArrowColor = '#1e293b';
-document.querySelectorAll('.theme-option').forEach(opt => {
-    opt.addEventListener('click', () => {
-        document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
-        opt.classList.add('active');
-        
-        const selectedTheme = opt.getAttribute('data-theme');
-        document.body.className = selectedTheme;
+// Ganti Warna Latar via Palet
+let currentArrowColor = '#38bdf8';
+document.querySelectorAll('.bg-opt-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.bg-opt-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
 
-        // Ambil warna panah sesuai tema
+        const bgClass = btn.getAttribute('data-bg');
+        document.body.className = bgClass;
+
         const style = getComputedStyle(document.body);
         currentArrowColor = style.getPropertyValue('--arrow-color').trim();
 
         draw();
-        themeModal.classList.add('hidden');
+        bgModal.classList.add('hidden');
     });
 });
 
-// Grid Padat Labirin Panah (Persis Video)
+// Grid & Arrow Maze Generator
 let cols = 14;
 let rows = 18;
 let cellSize = 22;
@@ -145,7 +152,6 @@ function initLevel() {
     let occupied = Array(rows).fill(null).map(() => Array(cols).fill(false));
     const dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
 
-    // Generator Labirin Ular Panah Padat
     for (let attempt = 0; attempt < 1500; attempt++) {
         let hx = Math.floor(Math.random() * cols);
         let hy = Math.floor(Math.random() * rows);
@@ -216,6 +222,7 @@ function initLevel() {
 
 function updateUI() {
     levelNumEl.textContent = currentLevel;
+    coinCountEl.textContent = coins;
     const hearts = livesDisplayEl.querySelectorAll('.heart');
     hearts.forEach((h, idx) => {
         if (idx < lives) h.classList.add('active');
@@ -223,7 +230,7 @@ function updateUI() {
     });
 }
 
-// Render Panah, Buntut Titik, & Efek Merah Saat Tabrakan (Persis Video)
+// Draw Canvas: Panah Single Color Sesuai Tema
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -232,10 +239,10 @@ function draw() {
         const head = path[0];
         const tail = path[path.length - 1];
 
-        // Warna Panah (Sesuai Tema atau Merah Jika Menabrak)
+        // Warna Panah Solid
         const drawColor = a.hitHighlight ? '#ef4444' : currentArrowColor;
 
-        // 1. Garis Badan Ular Panah
+        // Badan Panah
         ctx.strokeStyle = drawColor;
         ctx.lineWidth = cellSize * 0.34;
         ctx.lineCap = 'round';
@@ -248,15 +255,15 @@ function draw() {
         }
         ctx.stroke();
 
-        // 2. Titik Buntut/Ekor
+        // Titik Ekor Panah
         const tailCx = (tail.x + 0.5) * cellSize;
         const tailCy = (tail.y + 0.5) * cellSize;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.beginPath();
-        ctx.arc(tailCx, tailCy, cellSize * 0.09, 0, Math.PI * 2);
+        ctx.arc(tailCx, tailCy, cellSize * 0.08, 0, Math.PI * 2);
         ctx.fill();
 
-        // 3. Ujung Kepala Panah Menyatu Lancip (Persis Video)
+        // Kepala Panah Lancip
         const headCx = (head.x + 0.5) * cellSize;
         const headCy = (head.y + 0.5) * cellSize;
         const arrowSize = cellSize * 0.42;
@@ -285,7 +292,7 @@ function draw() {
     });
 }
 
-// Interaksi Tap
+// Interaksi Tap Panah
 canvas.addEventListener('pointerdown', (e) => {
     const rect = canvas.getBoundingClientRect();
     const touchX = e.clientX - rect.left;
@@ -309,7 +316,6 @@ function checkAndMove(index) {
     let blocked = false;
     let blockingArrow = null;
 
-    // Cek Jalur Keluar
     arrows.forEach((other, oIdx) => {
         if (oIdx !== index) {
             other.path.forEach(pt => {
@@ -325,7 +331,6 @@ function checkAndMove(index) {
         playSound('hit');
         triggerVibrate();
 
-        // Highlight Merah Pada Panah Yang Menabrak (Persis Video)
         if (blockingArrow) {
             blockingArrow.hitHighlight = true;
             draw();
@@ -351,7 +356,7 @@ function checkAndMove(index) {
         if (arrows.length === 0) {
             setTimeout(() => {
                 playSound('win');
-                alert(`Level ${currentLevel} Selesai! 🎉`);
+                coins += 20; // Tambah Koin Saat Menang
                 currentLevel++;
                 lives = 3;
                 initLevel();
@@ -361,4 +366,4 @@ function checkAndMove(index) {
 }
 
 initLevel();
-            
+                   
