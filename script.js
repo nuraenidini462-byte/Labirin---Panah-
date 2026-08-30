@@ -19,19 +19,19 @@ document.getElementById('closeSettingsBtn').addEventListener('click', () => sett
 
 document.getElementById('closeGameOverBtn').addEventListener('click', () => gameOverModal.classList.add('hidden'));
 
-// Game States
-let currentLevel = 187;
-let coins = 460;
+// Game States: LEVEL MULAI DARI 1
+let currentLevel = 1;
+let coins = 100;
 let lives = 3;
 let isSfxOn = true;
 let isMusicOn = true;
 let isVibrateOn = true;
 
-// Web Audio Synth BGM & SFX
+// Audio System (BGM 8-Bit Interaktif)
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let bgmInterval = null;
+let bgmTimer = null;
 
-function playTone(freq, duration, type = 'sine') {
+function playTone(freq, duration, type = 'square', vol = 0.05) {
     if (!isSfxOn) return;
     try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -39,7 +39,7 @@ function playTone(freq, duration, type = 'sine') {
         const gain = audioCtx.createGain();
         osc.type = type;
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
@@ -49,32 +49,42 @@ function playTone(freq, duration, type = 'sine') {
 }
 
 function playSound(type) {
-    if (type === 'move') playTone(600, 0.08, 'triangle');
-    if (type === 'hit')  playTone(120, 0.25, 'sawtooth');
-    if (type === 'win')  playTone(880, 0.3, 'sine');
+    if (type === 'move') playTone(587.33, 0.1, 'triangle', 0.1); // D5
+    if (type === 'hit')  playTone(150, 0.25, 'sawtooth', 0.12);
+    if (type === 'win')  {
+        playTone(523.25, 0.1, 'square', 0.1);
+        setTimeout(() => playTone(659.25, 0.1, 'square', 0.1), 100);
+        setTimeout(() => playTone(783.99, 0.2, 'square', 0.1), 200);
+    }
 }
 
-// Musik Melodi Latar
-function startBGM() {
-    if (bgmInterval) clearInterval(bgmInterval);
-    const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63];
+// Lagu Latar Ceria & Menarik (Catchy Melody)
+function startCatchyBGM() {
+    if (bgmTimer) clearInterval(bgmTimer);
+    const melody = [
+        {f: 329.63, d: 0.15}, {f: 329.63, d: 0.15}, {f: 0, d: 0.15}, {f: 329.63, d: 0.15},
+        {f: 0, d: 0.15},      {f: 261.63, d: 0.15}, {f: 329.63, d: 0.2}, {f: 392.00, d: 0.3},
+        {f: 196.00, d: 0.3},  {f: 261.63, d: 0.2},  {f: 196.00, d: 0.2}, {f: 164.81, d: 0.2},
+        {f: 220.00, d: 0.2},  {f: 246.94, d: 0.2},  {f: 233.08, d: 0.15},{f: 220.00, d: 0.2}
+    ];
     let step = 0;
-    bgmInterval = setInterval(() => {
+    bgmTimer = setInterval(() => {
         if (isMusicOn) {
-            playTone(notes[step % notes.length], 0.15, 'sine');
+            const note = melody[step % melody.length];
+            if (note.f > 0) playTone(note.f, note.d, 'triangle', 0.03);
             step++;
         }
-    }, 400);
+    }, 220);
 }
 
 document.addEventListener('click', () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    if (!bgmInterval) startBGM();
+    if (!bgmTimer) startCatchyBGM();
 }, { once: true });
 
 function triggerVibrate() {
     if (isVibrateOn && navigator.vibrate) {
-        navigator.vibrate(80);
+        navigator.vibrate(70);
     }
 }
 
@@ -82,7 +92,7 @@ document.getElementById('sfxToggle').addEventListener('change', (e) => isSfxOn =
 document.getElementById('musicToggle').addEventListener('change', (e) => isMusicOn = e.target.checked);
 document.getElementById('vibrateToggle').addEventListener('change', (e) => isVibrateOn = e.target.checked);
 
-// Pembelian Nyawa Menggunakan Koin
+// Pembelian Nyawa Koin
 function buyLivesWithCoins() {
     if (coins >= 50) {
         coins -= 50;
@@ -128,10 +138,10 @@ document.querySelectorAll('.bg-opt-btn').forEach(btn => {
     });
 });
 
-// Grid & Arrow Maze Generator
-let cols = 14;
-let rows = 18;
-let cellSize = 22;
+// Generator Ukuran Grid Sesuai Level
+let cols = 6;
+let rows = 8;
+let cellSize = 40;
 let arrows = [];
 
 function resizeCanvas() {
@@ -149,10 +159,14 @@ window.addEventListener('resize', resizeCanvas);
 
 function initLevel() {
     arrows = [];
+    // Penyesuaian Tingkat Kesulitan Berdasarkan Level
+    cols = Math.min(14, 5 + Math.floor(currentLevel / 2));
+    rows = Math.min(18, 7 + Math.floor(currentLevel / 2));
+
     let occupied = Array(rows).fill(null).map(() => Array(cols).fill(false));
     const dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
 
-    for (let attempt = 0; attempt < 1500; attempt++) {
+    for (let attempt = 0; attempt < 1000; attempt++) {
         let hx = Math.floor(Math.random() * cols);
         let hy = Math.floor(Math.random() * rows);
 
@@ -176,7 +190,7 @@ function initLevel() {
 
         if (!pathClearOut) continue;
 
-        let targetLen = Math.floor(Math.random() * 6) + 3;
+        let targetLen = Math.floor(Math.random() * 4) + 2;
         let path = [{x: hx, y: hy}];
         let tempOccupied = JSON.parse(JSON.stringify(occupied));
         tempOccupied[hy][hx] = true;
@@ -185,16 +199,7 @@ function initLevel() {
         let success = true;
 
         for (let l = 1; l < targetLen; l++) {
-            let ds = (l === 1) 
-                ? [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}].filter(d => {
-                    if (dir === 'LEFT' && d.x === 1) return false;
-                    if (dir === 'RIGHT' && d.x === -1) return false;
-                    if (dir === 'UP' && d.y === 1) return false;
-                    if (dir === 'DOWN' && d.y === -1) return false;
-                    return true;
-                })
-                : [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
-
+            let ds = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
             let neighbors = [];
             for (let d of ds) {
                 let nx = currX + d.x, ny = currY + d.y;
@@ -230,7 +235,7 @@ function updateUI() {
     });
 }
 
-// Draw Canvas: Panah Single Color Sesuai Tema
+// Render Panah Lengkap Dengan Kepala Panah di Depan
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -239,12 +244,11 @@ function draw() {
         const head = path[0];
         const tail = path[path.length - 1];
 
-        // Warna Panah Solid
         const drawColor = a.hitHighlight ? '#ef4444' : currentArrowColor;
 
-        // Badan Panah
+        // Draw Line Body
         ctx.strokeStyle = drawColor;
-        ctx.lineWidth = cellSize * 0.34;
+        ctx.lineWidth = cellSize * 0.32;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
@@ -255,7 +259,7 @@ function draw() {
         }
         ctx.stroke();
 
-        // Titik Ekor Panah
+        // Ekor Lingkaran Kecil
         const tailCx = (tail.x + 0.5) * cellSize;
         const tailCy = (tail.y + 0.5) * cellSize;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
@@ -263,10 +267,10 @@ function draw() {
         ctx.arc(tailCx, tailCy, cellSize * 0.08, 0, Math.PI * 2);
         ctx.fill();
 
-        // Kepala Panah Lancip
+        // Kepala Panah Utama Lancip di Ujung Depan
         const headCx = (head.x + 0.5) * cellSize;
         const headCy = (head.y + 0.5) * cellSize;
-        const arrowSize = cellSize * 0.42;
+        const arrowSize = cellSize * 0.45;
 
         ctx.save();
         ctx.translate(headCx, headCy);
@@ -281,10 +285,10 @@ function draw() {
 
         ctx.fillStyle = drawColor;
         ctx.beginPath();
-        ctx.moveTo(arrowSize * 0.8, 0);
-        ctx.lineTo(-arrowSize * 0.4, -arrowSize * 0.55);
+        ctx.moveTo(arrowSize * 0.9, 0);
+        ctx.lineTo(-arrowSize * 0.35, -arrowSize * 0.55);
         ctx.lineTo(-arrowSize * 0.1, 0);
-        ctx.lineTo(-arrowSize * 0.4, arrowSize * 0.55);
+        ctx.lineTo(-arrowSize * 0.35, arrowSize * 0.55);
         ctx.closePath();
         ctx.fill();
 
@@ -292,7 +296,7 @@ function draw() {
     });
 }
 
-// Interaksi Tap Panah
+// Interaction Event Handling
 canvas.addEventListener('pointerdown', (e) => {
     const rect = canvas.getBoundingClientRect();
     const touchX = e.clientX - rect.left;
@@ -356,7 +360,7 @@ function checkAndMove(index) {
         if (arrows.length === 0) {
             setTimeout(() => {
                 playSound('win');
-                coins += 20; // Tambah Koin Saat Menang
+                coins += 20;
                 currentLevel++;
                 lives = 3;
                 initLevel();
@@ -366,4 +370,4 @@ function checkAndMove(index) {
 }
 
 initLevel();
-                   
+            
