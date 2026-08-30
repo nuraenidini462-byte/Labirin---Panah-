@@ -235,20 +235,20 @@ function updateUI() {
     });
 }
 
-// Render Panah Lengkap Dengan Kepala Panah di Depan
+// Render Panah dengan Ujung Lancip Menunjukkan Arah Keluar
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     arrows.forEach(a => {
         const path = a.path;
-        const head = path[0];
-        const tail = path[path.length - 1];
+        const head = path[0]; // Ujung Depan / Kepala Panah
+        const tail = path[path.length - 1]; // Ujung Buntut Panah
 
         const drawColor = a.hitHighlight ? '#ef4444' : currentArrowColor;
 
-        // Draw Line Body
+        // 1. Gambar Jalur/Badan Panah
         ctx.strokeStyle = drawColor;
-        ctx.lineWidth = cellSize * 0.32;
+        ctx.lineWidth = cellSize * 0.30;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
@@ -259,7 +259,7 @@ function draw() {
         }
         ctx.stroke();
 
-        // Ekor Lingkaran Kecil
+        // 2. Gambar Titik Bulat di Buntut Panah
         const tailCx = (tail.x + 0.5) * cellSize;
         const tailCy = (tail.y + 0.5) * cellSize;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
@@ -267,14 +267,16 @@ function draw() {
         ctx.arc(tailCx, tailCy, cellSize * 0.08, 0, Math.PI * 2);
         ctx.fill();
 
-        // Kepala Panah Utama Lancip di Ujung Depan
+        // 3. Gambar Segitiga Lancip di Ujung Depan (Petunjuk Arah Utama)
         const headCx = (head.x + 0.5) * cellSize;
         const headCy = (head.y + 0.5) * cellSize;
-        const arrowSize = cellSize * 0.45;
+        const arrowLen = cellSize * 0.45; // Panjang Sudut Lancip
+        const arrowWidth = cellSize * 0.35; // Lebar Alas Panah
 
         ctx.save();
         ctx.translate(headCx, headCy);
 
+        // Rotasi Sesuai Arah Keluar
         let angle = 0;
         if (a.dir === 'RIGHT') angle = 0;
         if (a.dir === 'DOWN')  angle = Math.PI / 2;
@@ -283,12 +285,22 @@ function draw() {
 
         ctx.rotate(angle);
 
+        // Menggambar Kepala Panah Berujung 1 Sudut Sangat Lancip
         ctx.fillStyle = drawColor;
         ctx.beginPath();
-        ctx.moveTo(arrowSize * 0.9, 0);
-        ctx.lineTo(-arrowSize * 0.35, -arrowSize * 0.55);
-        ctx.lineTo(-arrowSize * 0.1, 0);
-        ctx.lineTo(-arrowSize * 0.35, arrowSize * 0.55);
+        
+        // Ujung Paling Depan (Lancip)
+        ctx.moveTo(arrowLen, 0); 
+        
+        // Sayap Kiri Belakang
+        ctx.lineTo(-arrowLen * 0.3, -arrowWidth); 
+        
+        // Cekungan Tengah Belakang
+        ctx.lineTo(-arrowLen * 0.1, 0); 
+        
+        // Sayap Kanan Belakang
+        ctx.lineTo(-arrowLen * 0.3, arrowWidth); 
+        
         ctx.closePath();
         ctx.fill();
 
